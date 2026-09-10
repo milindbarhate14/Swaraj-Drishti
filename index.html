@@ -1704,10 +1704,43 @@ function analyzeRFP(text, kb){
     const det = rule.detect(text);
     if(det){
       const a = rule.assess(det, kb);
-      requirements.push({ category:rule.category, label:rule.label, ask:det.ask, esds:a.esds, status:a.status, note:a.note, matchIndex:det.index, matchLen:det.matchLen });
+      requirements.push({ id:rule.id, category:rule.category, label:rule.label, ask:det.ask, esds:a.esds, status:a.status, note:a.note, matchIndex:det.index, matchLen:det.matchLen });
     }
   });
   requirements.push(...runCustomRules(text, kb));
+
+  // ---- Generic PQ/TQ clause scanner: catches obligation-style eligibility/technical clauses that
+  // the curated RULES above don't have a specific pattern for, so genuine gaps/challenges in the RFP
+  // aren't silently invisible just because no named rule happened to match them. Anything caught here
+  // that doesn't have a clear Capability Library field to check against is marked 'partial' (needs
+  // manual verification) rather than assumed to be met.
+  (function scanGenericClauses(){
+    const alreadyCovered = new Set(requirements.map(r=>(r.matchIndex!=null? r.matchIndex : -1)));
+    const sentences = text.split(/(?<=[.;:\n])\s+/).map(s=>s.trim()).filter(s=>s.length>25 && s.length<400);
+    const obligationRe = /\b(shall|must|should|is required to|are required to|mandatory|not less than|at least|minimum of|no less than)\b/i;
+    const eligibilityRe = /\b(eligib|disqualif|blacklist|debar|non[- ]conviction|conflict of interest|sole bidder|joint venture|consortium|MSE|MSME|make in india|local content|prior experience|similar nature|litigation|arbitration|penalt|liquidated damages)\b/i;
+    const seenGeneric = new Set();
+    let count = 0;
+    let cursor = 0;
+    sentences.forEach(sentence=>{
+      if(count>=25) return; // cap so this doesn't overwhelm the table
+      const idx = text.indexOf(sentence, cursor);
+      cursor = idx>=0 ? idx + sentence.length : cursor;
+      if(idx>=0 && alreadyCovered.has(idx)) return;
+      const low = sentence.toLowerCase();
+      if(!obligationRe.test(low)) return;
+      if(!eligibilityRe.test(low)) return;
+      const key = sentence.slice(0,70).toLowerCase();
+      if(seenGeneric.has(key)) return;
+      seenGeneric.add(key);
+      count++;
+      let status='partial', note='No specific Capability Library field maps to this clause automatically — verify against actual company records before submission.';
+      let esds='Not automatically checked';
+      if(/blacklist|debar/i.test(low)){ status='info'; esds='No known blacklisting/debarment on record'; note='Confirm with Legal/Compliance before signing the non-blacklisting declaration.'; }
+      else if(/msme|mse\b/i.test(low)){ status='info'; esds=kb.company.msmeStatus || 'MSME/MSE status not recorded in Capability Library'; note='Add MSME/MSE registration status to the Capability Library if applicable, or confirm this clause does not apply.'; }
+      requirements.push({ id:'generic', category:'Additional eligibility clause (auto-detected)', label: sentence.slice(0,90)+(sentence.length>90?'…':''), ask: sentence.slice(0,160)+(sentence.length>160?'…':''), esds, status, note, matchIndex: idx>=0?idx:null, matchLen: sentence.length });
+    });
+  })();
 
   // certifications
   const certGaps = [];
@@ -1747,9 +1780,16 @@ function analyzeRFP(text, kb){
     { key:'Non-blacklisting / litigation declaration', re:/blacklist|litigation declaration|non[- ]conviction/i, avail:'Company document — Legal to issue standard declaration', esds:false },
     { key:'Manufacturer Authorisation Form (OEM)', re:/manufacturer authorisation|MAF\b/i, avail:'Coordinate with GPU/hardware OEM partner', esds:false },
     { key:'Work order / client reference letters', re:/work order|client reference|completion certificate/i, avail:'Pull from delivery/PMO — use reference projects in Capability Library', esds:false },
-    { key:'ISO / CMMI / SOC certificates', re:/ISO\s*27001|CMMI|SOC\s*2/i, avail:'Available — attach current certificates from compliance repository', esds:false }
+    { key:'ISO / CMMI / SOC certificates', re:/ISO\s*27001|CMMI|SOC\s*2/i, avail:'Available — attach current certificates from compliance repository', esds:false },
+    { key:'Bank Guarantee (performance security)', re:/performance (bank )?guarantee|performance security/i, avail:'Finance action — arrange PBG from bank', esds:false },
+    { key:'Solvency certificate', re:/solvency certificate/i, avail:'Company document — obtain from bank', esds:false },
+    { key:'Net worth certificate (CA certified)', re:/net\s*worth certificate/i, avail:'Company document — obtain from Finance/CA', esds:false },
+    { key:'Undertaking / self-declaration (format as prescribed)', re:/self[- ]declaration|undertaking (letter|format)/i, avail:'Template available — fill and sign as per prescribed format', esds:false },
+    { key:'Covering letter / letter of submission', re:/covering letter|letter of submission/i, avail:'Template available', esds:false },
+    { key:'Bid securing declaration', re:/bid securing declaration/i, avail:'Template available — sign as per prescribed format', esds:false }
   ];
   const documentChecklist = [];
+  const docKeysAdded = new Set();
   docPatterns.forEach(p=>{
     const m = text.match(p.re);
     if(m){
@@ -1757,8 +1797,70 @@ function analyzeRFP(text, kb){
         doc: p.key, context: contextSnippet(text, m.index), avail: p.avail, templateId: p.esds || null,
         matchIndex: m.index, matchLen: m[0].length
       });
+      docKeysAdded.add(p.key.toLowerCase());
     }
   });
+
+  // Map every detected PQ/TQ requirement to the actual document that proves it — even if the RFP's
+  // exact wording for that document (e.g. "self-certification") wasn't literally present in the text,
+  // so the checklist reflects everything the bid genuinely needs to submit, not just what the regexes
+  // above happened to spot verbatim.
+  const REQUIREMENT_DOC_MAP = {
+    turnover: { key:'Annual turnover certificate (CA/CS certified)', avail:'Template available', esds:'turnover' },
+    manpower: { key:'Manpower / FTE undertaking', avail:'Template available', esds:'manpower' },
+    compute: { key:'Compute & storage self-certification', avail:'Template available', esds:'compute_storage' },
+    storage: { key:'Compute & storage self-certification', avail:'Template available', esds:'compute_storage' },
+    gpu: { key:'GPU nodes self-certification', avail:'Template available', esds:'gpu_nodes' },
+    aistorage: { key:'AI storage self-certification', avail:'Template available', esds:'ai_storage' },
+    network: { key:'Network backbone self-certification', avail:'Template available', esds:'network_backbone' },
+    rpo: { key:'DR compliance statement (RPO/RTO commitment)', avail:'Template available — issue as a signed DR compliance letter', esds:false },
+    rto: { key:'DR compliance statement (RPO/RTO commitment)', avail:'Template available — issue as a signed DR compliance letter', esds:false },
+    uptime: { key:'SLA commitment / undertaking letter', avail:'Company document — Delivery/SLA desk to issue', esds:false },
+    tier: { key:'Data centre Tier certification (TIA-942)', avail:'Available — attach current TIA-942 certificate', esds:false },
+    experience: { key:'Work order / client reference letters', avail:'Pull from delivery/PMO — use reference projects in Capability Library', esds:false },
+    breach: { key:'Security incident response / SOC commitment letter', avail:'Company document — Security/Compliance to issue', esds:false }
+  };
+  requirements.forEach(r=>{
+    const mapping = REQUIREMENT_DOC_MAP[r.id];
+    if(!mapping) return;
+    if(docKeysAdded.has(mapping.key.toLowerCase())) return;
+    docKeysAdded.add(mapping.key.toLowerCase());
+    documentChecklist.push({
+      doc: mapping.key,
+      context: 'Implied by the "' + r.label + '" requirement detected in this RFP (ask: ' + r.ask + ') — exact document phrasing not found verbatim in the text.',
+      avail: mapping.avail, templateId: mapping.esds || null,
+      matchIndex: r.matchIndex!=null ? r.matchIndex : null, matchLen: r.matchLen || 20
+    });
+  });
+
+  // Broad generic sweep for any other named Annexure/Appendix/Schedule/Form/Proforma the fixed
+  // patterns above didn't catch by name, so "all PQ & TQ forms" are represented even when the RFP
+  // uses non-standard phrasing.
+  (function scanGenericAnnexures(){
+    const patterns = [
+      { re:/annexure[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Annexure '+m[1].toUpperCase() },
+      { re:/appendix[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Appendix '+m[1].toUpperCase() },
+      { re:/schedule[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Schedule '+m[1].toUpperCase() },
+      { re:/form[\s\-]*no\.?[\s\-:]*([a-z0-9]+)[^.\n]{0,60}/gi, label:(m)=>'Form No. '+m[1].toUpperCase() },
+      { re:/proforma[\s\-:]*([ivxlcdm]+|[a-z]|\d+)?[^.\n]{0,60}/gi, label:(m)=>'Proforma'+(m[1]?(' '+m[1].toUpperCase()):'') }
+    ];
+    let count = 0;
+    patterns.forEach(p=>{
+      let m;
+      p.re.lastIndex = 0;
+      while((m = p.re.exec(text)) && count<40){
+        const label = p.label(m);
+        const dedupeKey = label.toLowerCase();
+        if(docKeysAdded.has(dedupeKey)) continue;
+        docKeysAdded.add(dedupeKey);
+        documentChecklist.push({
+          doc: label, context: contextSnippet(text, m.index), avail: 'Prepare in the exact prescribed format given in the RFP', templateId: null,
+          matchIndex: m.index, matchLen: m[0].length
+        });
+        count++;
+      }
+    });
+  })();
 
   // marking scheme -> scorecard
   const marking = detectMarkingScheme(text);
