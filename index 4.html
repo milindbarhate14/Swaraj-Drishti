@@ -1,0 +1,2743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWARAJ Drishti — RFP Analyser | ESDS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root{
+  --bg:#F5F6FA; --card:#FFFFFF; --border:#E4E7EC; --border-strong:#D0D5DD;
+  --text:#101828; --text-soft:#475467; --text-mute:#667085;
+  --blue:#2F6FED; --blue-dark:#1D4FC4; --blue-tint:#EAF0FE;
+  --green:#16A34A; --green-tint:#E9F9EF;
+  --amber:#D97706; --amber-tint:#FEF3E2;
+  --red:#DC2626; --red-tint:#FDECEC;
+  --purple:#7C3AED; --purple-tint:#F2ECFE;
+  --teal:#0D9488; --teal-tint:#E6F7F5;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+}
+button,input,textarea,select{font-family:inherit; font-size:inherit;}
+a{color:inherit;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:#D0D5DD;border-radius:8px;}
+
+/* ---------- Layout ---------- */
+.app{display:flex; min-height:100vh;}
+.sidebar{
+  width:260px; flex:0 0 260px; background:#fff; border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:20px 16px; position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand{padding:4px 8px 18px 8px; border-bottom:1px solid var(--border); margin-bottom:16px;}
+.brand .eyebrow{font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--blue); text-transform:uppercase;}
+.brand h1{font-size:19px; font-weight:800; margin:4px 0 2px; letter-spacing:-.01em;}
+.brand .sub{font-size:12px; color:var(--text-mute);}
+.navgroup{margin-bottom:18px;}
+.navgroup .label{font-size:11px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.06em; padding:0 10px 8px;}
+.navitem{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; cursor:pointer;
+  color:var(--text-soft); font-weight:500; margin-bottom:2px; border:1px solid transparent;
+}
+.navitem:hover{background:#F2F4F7;}
+.navitem.active{background:var(--blue); color:#fff; font-weight:600;}
+.navitem .ico{width:18px; text-align:center; flex:0 0 18px;}
+.navitem .badge{margin-left:auto; font-size:11px; background:#EEF1F5; color:var(--text-mute); padding:1px 7px; border-radius:20px;}
+.navitem.active .badge{background:rgba(255,255,255,.25); color:#fff;}
+.sidebar-foot{margin-top:auto; padding-top:14px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text-mute);}
+
+.main{flex:1; min-width:0; display:flex; flex-direction:column;}
+.topbar{
+  height:60px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center;
+  justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:5;
+}
+.crumb{font-size:13px; color:var(--text-mute);}
+.crumb b{color:var(--text); font-weight:600;}
+.topbar-right{display:flex; align-items:center; gap:14px; font-size:12.5px; color:var(--text-mute);}
+.pill-btn{
+  background:var(--blue); color:#fff; border:none; padding:8px 14px; border-radius:8px; font-weight:600;
+  cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;
+}
+.pill-btn.secondary{background:#fff; color:var(--text); border:1px solid var(--border-strong);}
+.pill-btn.danger{background:#fff; color:var(--red); border:1px solid #F3B4B4;}
+.pill-btn:disabled{opacity:.5; cursor:not-allowed;}
+
+.content{padding:26px 28px 60px; max-width:1320px; width:100%; margin:0 auto;}
+.view{display:none;}
+.view.active{display:block;}
+
+h2.view-title{font-size:20px; font-weight:800; margin:0 0 4px; letter-spacing:-.01em;}
+p.view-desc{color:var(--text-mute); margin:0 0 22px; font-size:13.5px; max-width:760px;}
+
+/* ---------- Cards / grid ---------- */
+.grid{display:grid; gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
+
+.stat-card{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px 14px;
+  box-shadow:var(--shadow); border-top:3px solid var(--blue);
+}
+.stat-card .label{font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--text-mute); text-transform:uppercase;}
+.stat-card .num{font-size:28px; font-weight:800; margin:6px 0 2px; letter-spacing:-.02em;}
+.stat-card .foot{font-size:12px; color:var(--text-mute);}
+.stat-card.c-green{border-top-color:var(--green);}
+.stat-card.c-amber{border-top-color:var(--amber);}
+.stat-card.c-red{border-top-color:var(--red);}
+.stat-card.c-purple{border-top-color:var(--purple);}
+.stat-card.c-teal{border-top-color:var(--teal);}
+
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);}
+.card-head{padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.card-head h3{margin:0; font-size:15px; font-weight:700;}
+.card-head .desc{font-size:12.5px; color:var(--text-mute); margin-top:2px;}
+.card-body{padding:18px 20px;}
+
+/* ---------- Tables ---------- */
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-mute); font-weight:700; padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap;}
+td{padding:12px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr.row-urgent{background:var(--red-tint);}
+.table-wrap{overflow-x:auto;}
+
+.status-pill{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap;}
+.status-met{background:var(--green-tint); color:#0B7A34;}
+.status-partial{background:var(--amber-tint); color:#A15C00;}
+.status-gap{background:var(--red-tint); color:#B42318;}
+.status-info{background:var(--blue-tint); color:var(--blue-dark);}
+.status-na{background:#F2F4F7; color:var(--text-mute);}
+
+.tag{display:inline-block; padding:2px 9px; border-radius:6px; font-size:11.5px; font-weight:600; background:#F2F4F7; color:var(--text-soft); margin:2px 4px 2px 0;}
+
+/* ---------- Upload ---------- */
+.dropzone{
+  border:2px dashed var(--border-strong); border-radius:14px; background:#FAFBFC; padding:50px 20px;
+  text-align:center; cursor:pointer; transition:.15s;
+}
+.dropzone.drag{border-color:var(--blue); background:var(--blue-tint);}
+.dropzone .icon{font-size:34px; margin-bottom:8px;}
+.dropzone h4{margin:0 0 4px; font-size:16px; font-weight:700;}
+.dropzone p{margin:0; color:var(--text-mute); font-size:13px;}
+.dropzone input{display:none;}
+#fileChipWrap{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px;}
+.file-chip{display:inline-flex; align-items:center; gap:8px; background:var(--blue-tint); color:var(--blue-dark); padding:6px 12px; border-radius:8px; font-weight:600; font-size:13px;}
+
+.progress-wrap{background:#F2F4F7; border-radius:20px; height:8px; overflow:hidden; margin:14px 0;}
+.progress-bar{background:var(--blue); height:100%; width:0%; transition:width .2s;}
+
+.note-box{background:var(--blue-tint); border:1px solid #C7D9FE; border-radius:10px; padding:12px 16px; font-size:12.5px; color:var(--blue-dark); margin-bottom:18px;}
+.note-box.amber{background:var(--amber-tint); border-color:#F5D9A6; color:#8A5300;}
+.note-box b{font-weight:700;}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:18px;}
+.tab{padding:10px 4px; margin-right:22px; font-weight:600; color:var(--text-mute); cursor:pointer; border-bottom:2px solid transparent; font-size:13.5px;}
+.tab.active{color:var(--blue); border-bottom-color:var(--blue);}
+.tabpanel{display:none;}
+.tabpanel.active{display:block;}
+
+/* ---------- Forms ---------- */
+label.field-label{display:block; font-size:12.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px;}
+input[type=text],input[type=number],input[type=password],textarea,select{
+  width:100%; padding:9px 11px; border:1px solid var(--border-strong); border-radius:8px; background:#fff; color:var(--text);
+}
+textarea{resize:vertical; min-height:90px; font-family:'Inter',sans-serif;}
+.field{margin-bottom:14px;}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.hint{font-size:11.5px; color:var(--text-mute); margin-top:4px;}
+
+/* ---------- Fit score ring ---------- */
+.fitwrap{display:flex; align-items:center; gap:22px;}
+.fitring{position:relative; width:110px; height:110px; flex:0 0 110px;}
+.fitring svg{transform:rotate(-90deg);}
+.fitring .num{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800;}
+
+.chip-row{display:flex; gap:10px; flex-wrap:wrap;}
+.chip-stat{flex:1; min-width:110px; border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-align:center;}
+.chip-stat .n{font-size:22px; font-weight:800;}
+.chip-stat .l{font-size:11px; color:var(--text-mute); text-transform:uppercase; font-weight:700; letter-spacing:.04em;}
+
+.risk-item{display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--border);}
+.risk-item:last-child{border-bottom:none;}
+.risk-dot{flex:0 0 8px; height:8px; width:8px; border-radius:50%; margin-top:6px;}
+.risk-item.high .risk-dot{background:var(--red);}
+.risk-item.med .risk-dot{background:var(--amber);}
+.risk-item.info .risk-dot{background:var(--blue);}
+.risk-item .rtitle{font-weight:700; font-size:13px;}
+.risk-item .rtext{color:var(--text-soft); font-size:12.5px; margin-top:2px;}
+
+.empty-state{text-align:center; padding:60px 20px; color:var(--text-mute);}
+.empty-state .icon{font-size:38px; margin-bottom:10px;}
+
+/* Library list */
+.lib-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);}
+.lib-row:last-child{border-bottom:none;}
+.lib-row input{flex:1;}
+.icon-btn{border:1px solid var(--border-strong); background:#fff; border-radius:8px; width:32px; height:32px; cursor:pointer; color:var(--text-mute); flex:0 0 32px;}
+.icon-btn:hover{background:#F2F4F7; color:var(--red);}
+
+.small-muted{font-size:11.5px; color:var(--text-mute);}
+hr.sep{border:none; border-top:1px solid var(--border); margin:18px 0;}
+
+.doc-preview{
+  border:1px solid var(--border); border-radius:10px; background:#fff; padding:34px 40px; font-family:'Times New Roman', serif;
+  min-height:400px; line-height:1.7; font-size:14px; color:#111;
+}
+.doc-preview[contenteditable=true]:focus{outline:2px solid var(--blue-tint);}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}
+  .fitwrap{flex-direction:column;}
+  .content{padding:18px;}
+  .doc-preview{padding:20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="eyebrow">ESDS · Presales</div>
+      <h1>SWARAJ Drishti</h1>
+      <div class="sub">RFP / EOI Fit Analyser</div>
+    </div>
+
+    <div class="navgroup">
+      <div class="label">Workspace</div>
+      <div class="navitem active" data-view="dashboard"><span class="ico">▦</span> Dashboard</div>
+      <div class="navitem" data-view="upload"><span class="ico">⇪</span> Upload &amp; Analyse RFP</div>
+      <div class="navitem" data-view="results"><span class="ico">▤</span> Analysis Report <span class="badge" id="navResultsBadge">—</span></div>
+      <div class="navitem" data-view="annexures"><span class="ico">▥</span> ESDS Certificate Templates</div>
+    </div>
+
+    <div class="navgroup">
+      <div class="label">ESDS Master Data</div>
+      <div class="navitem" data-view="library"><span class="ico">◧</span> Capability Library</div>
+      <div class="navitem" data-view="history"><span class="ico">◷</span> Past Analyses <span class="badge" id="navHistBadge">0</span></div>
+    </div>
+
+    <div class="navgroup">
+      <div class="label">Configuration</div>
+      <div class="navitem" data-view="settings"><span class="ico">⚙</span> Settings &amp; Data</div>
+    </div>
+
+    <div class="sidebar-foot">
+      Runs entirely in your browser.<br>Nothing is uploaded to any server.
+    </div>
+  </div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb">SWARAJ Drishti / <b id="crumbCurrent">Dashboard</b></div>
+      <div class="topbar-right">
+        <span id="clock"></span>
+        <button class="pill-btn secondary" id="btnGoUpload">+ New Analysis</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ================= DASHBOARD ================= -->
+      <div class="view active" id="view-dashboard">
+        <h2 class="view-title">Presales Command Centre</h2>
+        <p class="view-desc">A live snapshot of what ESDS can currently prove on paper, and where your last RFP analyses stand.</p>
+
+        <div class="grid grid-4" style="margin-bottom:18px;">
+          <div class="stat-card">
+            <div class="label">Avg. Annual Turnover</div>
+            <div class="num" id="kbTurnoverStat">—</div>
+            <div class="foot">Last 3 audited FYs</div>
+          </div>
+          <div class="stat-card c-purple">
+            <div class="label">Certifications Held</div>
+            <div class="num" id="kbCertStat">—</div>
+            <div class="foot">ISO / CMMI / PCI / SOC / MeitY…</div>
+          </div>
+          <div class="stat-card c-teal">
+            <div class="label">Sovereign Data Centres</div>
+            <div class="num" id="kbDCStat">—</div>
+            <div class="foot">All Tier III rated</div>
+          </div>
+          <div class="stat-card c-amber">
+            <div class="label">GPU Nodes Available</div>
+            <div class="num" id="kbGPUStat">—</div>
+            <div class="foot" id="kbGPUFamStat">—</div>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="align-items:start;">
+          <div class="card">
+            <div class="card-head">
+              <div><h3>Get started</h3><div class="desc">Three steps from RFP to a client-ready fit report</div></div>
+            </div>
+            <div class="card-body">
+              <div class="risk-item info">
+                <div class="risk-dot"></div>
+                <div><div class="rtitle">1 · Upload the RFP / EOI</div><div class="rtext">Drop a PDF, DOCX or TXT tender document — text is extracted locally in your browser.</div></div>
+              </div>
+              <div class="risk-item info">
+                <div class="risk-dot"></div>
+                <div><div class="rtitle">2 · Review the fit report</div><div class="rtext">Every eligibility, technical and SLA clause it can detect is matched against the ESDS Capability Library.</div></div>
+              </div>
+              <div class="risk-item info">
+                <div class="risk-dot"></div>
+                <div><div class="rtitle">3 · Generate supporting annexures</div><div class="rtext">Turn ESDS's standard self-certifications into a signed-ready Word document in seconds.</div></div>
+              </div>
+              <button class="pill-btn" style="margin-top:6px;" onclick="go('upload')">Upload an RFP →</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div><h3>Recent analyses</h3><div class="desc">Saved locally on this device</div></div>
+            </div>
+            <div class="card-body" id="dashHistoryBody">
+              <div class="empty-state"><div class="icon">◷</div>No analyses yet. Run your first one from "Upload &amp; Analyse RFP".</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= UPLOAD ================= -->
+      <div class="view" id="view-upload">
+        <h2 class="view-title">Upload &amp; Analyse an RFP</h2>
+        <p class="view-desc">Accepts tender documents, EOIs or corrigenda in PDF, Word (.docx) or plain text — one file, or several at once (e.g. the main RFP plus a separate BOQ or corrigendum). Everything is parsed on your device — no file leaves the browser.</p>
+
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple>
+          <div class="icon">⇪</div>
+          <h4>Drag &amp; drop one or more files here</h4>
+          <p>or click to browse · PDF, DOCX, TXT · select multiple files to analyse them together</p>
+          <div id="fileChipWrap"></div>
+        </div>
+
+        <div id="uploadProgressWrap" style="display:none; margin-top:18px;">
+          <div class="small-muted" id="uploadStatusText">Reading document…</div>
+          <div class="progress-wrap"><div class="progress-bar" id="uploadProgressBar"></div></div>
+        </div>
+
+        <div class="note-box amber" style="margin-top:20px;">
+          <b>How this works —</b> Drishti (1) pulls out any Annexure / Appendix / Schedule / Proforma / BOQ formats the RFP itself contains, so you can download the blank ones straight into Word instead of retyping them, and (2) scans the rest of the text for known tender patterns (turnover, manpower, certifications, GPU/storage/network figures, RPO/RTO, SLA % etc.) and cross-checks each against your ESDS Capability Library. Upload more than one file — e.g. the main RFP plus a separate corrigendum or BOQ — and they're combined into a single report; each detected annexure notes which file it came from. This is a fast first pass, not a legal reading of the tender — always verify critical clauses (dates, EMD, evaluation weightage) and complex tables against the source PDF before submission.
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-head">
+            <div><h3>Or paste RFP text directly</h3><div class="desc">Useful for a single clause, a corrigendum, or if file parsing fails</div></div>
+          </div>
+          <div class="card-body">
+            <textarea id="pasteText" placeholder="Paste RFP / EOI text here…" style="min-height:140px;"></textarea>
+            <button class="pill-btn" style="margin-top:12px;" id="btnAnalysePasted">Analyse pasted text →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= RESULTS ================= -->
+      <div class="view" id="view-results">
+        <div id="resultsEmpty" class="empty-state">
+          <div class="icon">▤</div>
+          No report yet. <a href="#" onclick="go('upload');return false;" style="color:var(--blue);font-weight:600;">Upload an RFP</a> to generate one.
+        </div>
+
+        <div id="resultsBody" style="display:none;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:18px;">
+            <div>
+              <h2 class="view-title" id="resultTenderName">RFP Analysis Report</h2>
+              <p class="view-desc" style="margin-bottom:0;" id="resultTenderMeta">—</p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <select id="statusSelect" style="width:auto; padding:8px 10px;">
+                <option>Bidding</option><option>Submitted</option><option>Won</option><option>Lost</option><option>Not Pursuing</option>
+              </select>
+              <button class="pill-btn secondary" id="btnGenerateProposal">📝 Draft proposal (.doc)</button>
+              <button class="pill-btn secondary" id="btnExportReport">⇩ Fit report (.doc)</button>
+              <button class="pill-btn secondary" id="btnExportAnalysisJson">⇩ Share analysis (.json)</button>
+              <button class="pill-btn danger" id="btnDeleteAnalysis">Discard</button>
+            </div>
+          </div>
+
+          <div class="card" id="deadlineBanner" style="display:none; margin-bottom:18px;">
+            <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
+              <div>
+                <div class="small-muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; font-size:11px;">Submission deadline</div>
+                <div id="deadlineHeadline" style="font-size:20px; font-weight:800;">—</div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="date" id="manualDeadlineInput" style="width:auto;">
+                <button class="pill-btn secondary" id="btnAddToCalendar">📅 Add to calendar (.ics)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-2" style="margin-bottom:18px;">
+            <div class="card">
+              <div class="card-body fitwrap">
+                <div class="fitring">
+                  <svg width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r="46" stroke="#EEF1F5" stroke-width="12" fill="none"/>
+                    <circle id="fitCircle" cx="55" cy="55" r="46" stroke="#2F6FED" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"/>
+                  </svg>
+                  <div class="num" id="fitScoreNum">0%</div>
+                </div>
+                <div>
+                  <div style="font-weight:800; font-size:16px;">Overall Fit Score</div>
+                  <div class="small-muted" style="margin-bottom:8px;">Share of detected requirements ESDS can fully evidence today</div>
+                  <div class="chip-row">
+                    <div class="chip-stat"><div class="n" id="cMet" style="color:var(--green)">0</div><div class="l">Meets</div></div>
+                    <div class="chip-stat"><div class="n" id="cPartial" style="color:var(--amber)">0</div><div class="l">Partial</div></div>
+                    <div class="chip-stat"><div class="n" id="cGap" style="color:var(--red)">0</div><div class="l">Gap</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><div><h3>Detected tender details</h3><div class="desc">Best-effort extraction — verify against source</div></div></div>
+              <div class="card-body">
+                <table id="metaTable"><tbody></tbody></table>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active" data-tab="annex">Annexures found</div>
+            <div class="tab" data-tab="score">Scorecard</div>
+            <div class="tab" data-tab="req">Requirement-by-requirement</div>
+            <div class="tab" data-tab="docs">Document checklist</div>
+            <div class="tab" data-tab="source">Source &amp; highlights</div>
+            <div class="tab" data-tab="risks">Challenges &amp; risks</div>
+            <div class="tab" data-tab="ai">AI deep-dive (optional)</div>
+          </div>
+
+          <div class="tabpanel active" id="tab-annex">
+            <div class="note-box" id="annexFoundNote" style="display:none;"></div>
+            <div class="card" id="annexFoundCard">
+              <div class="card-head">
+                <div><h3>Annexures, schedules &amp; BOQ formats detected</h3><div class="desc">Extracted straight from the uploaded document — download the blank format to fill in and submit, no retyping.</div></div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <label class="small-muted" style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="autoFillToggle" checked style="width:auto;"> Auto-fill company details</label>
+                  <button class="pill-btn secondary" id="btnDownloadAllAnnexures" style="display:none;">⇩ Download all as one Word file</button>
+                </div>
+              </div>
+              <div class="card-body" id="annexFoundBody"></div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-score">
+            <div class="note-box" id="scoreNote"></div>
+            <div class="card">
+              <div class="card-head">
+                <div><h3>Projected technical score</h3><div class="desc">Auto-detected from the RFP's own marking scheme — every field below is editable, and you can add rows by hand</div></div>
+                <div style="text-align:right;"><div class="small-muted">Projected total</div><div id="scoreTotalNum" style="font-size:24px; font-weight:800; color:var(--blue);">0</div></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Criterion</th><th>Base (value → marks)</th><th>Increment</th><th>Max marks</th><th>ESDS value</th><th>Est. marks</th><th></th></tr></thead>
+                  <tbody id="scoreTableBody"></tbody>
+                </table>
+              </div>
+              <div class="card-body" style="padding-top:10px;"><button class="pill-btn secondary" id="btnAddScoreRow">+ Add scoring criterion</button></div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-req">
+            <div class="card">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Category</th><th>Requirement</th><th>RFP asks for</th><th>ESDS position</th><th>Status</th><th>Notes</th></tr></thead>
+                  <tbody id="reqTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-docs">
+            <div class="card">
+              <div class="card-head"><div><h3>Supporting documents the RFP appears to demand</h3><div class="desc">Cross-checked against the RFP's own annexures (previous tab) and ESDS's certificate templates</div></div></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Document</th><th>Where it was mentioned</th><th>ESDS can supply</th><th></th><th>Notes</th></tr></thead>
+                  <tbody id="docsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-source">
+            <div class="note-box" id="sourceNote"></div>
+            <div class="card">
+              <div class="card-head"><div><h3>Full extracted text</h3><div class="desc">Highlighted spans are what the detection engine matched — click a requirement row to jump here</div></div></div>
+              <div class="card-body">
+                <div id="sourceReader" class="doc-preview" style="font-family:Consolas,'Courier New',monospace; font-size:12.5px; max-height:600px; overflow:auto;">Run an analysis to see the source here.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-risks">
+            <div class="card">
+              <div class="card-head"><div><h3>Suggested reference projects to cite</h3><div class="desc">Ranked by keyword overlap with this RFP — from your Capability Library</div></div></div>
+              <div class="card-body" id="refProjectsBody"></div>
+            </div>
+            <div class="card" style="margin-top:16px;">
+              <div class="card-head"><div><h3>Challenges &amp; open questions</h3><div class="desc">Auto-drafted from the gaps and partial matches above — review before the internal go/no-go</div></div></div>
+              <div class="card-body" id="risksBody"></div>
+            </div>
+          </div>
+
+          <div class="tabpanel" id="tab-ai">
+            <div class="card">
+              <div class="card-head"><div><h3>AI-assisted deep read (optional)</h3><div class="desc">Sends the RFP text and your capability library directly to the Anthropic API from your browser, using your own API key. Nothing passes through any ESDS or third-party server.</div></div></div>
+              <div class="card-body">
+                <div class="field-row">
+                  <div class="field">
+                    <label class="field-label">Anthropic API key</label>
+                    <input type="password" id="aiKeyInput" placeholder="sk-ant-...">
+                    <div class="hint">Stored only in this browser's local storage. Get one at console.anthropic.com.</div>
+                  </div>
+                  <div class="field">
+                    <label class="field-label">Model</label>
+                    <input type="text" id="aiModelInput" value="claude-sonnet-5">
+                  </div>
+                </div>
+                <button class="pill-btn" id="btnRunAI">✨ Run AI deep-dive</button>
+                <div class="small-muted" id="aiStatus" style="margin-top:10px;"></div>
+                <div id="aiOutputWrap" style="display:none; margin-top:16px;">
+                  <hr class="sep">
+                  <div id="aiOutput" style="white-space:pre-wrap; font-size:13.5px; line-height:1.7;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= ANNEXURES ================= -->
+      <div class="view" id="view-annexures">
+        <h2 class="view-title">ESDS Certificate Templates</h2>
+        <p class="view-desc">These are ESDS-authored letters (turnover, manpower, GPU/compute self-certifications etc.) — use them when the RFP asks for a self-declaration but doesn't supply its own format. If the RFP already provides a blank annexure/BOQ format, get that instead from Analysis Report → "Annexures found in this RFP" — no retyping needed.</p>
+
+        <div class="grid" style="grid-template-columns:280px 1fr; gap:20px; align-items:start;">
+          <div class="card">
+            <div class="card-head"><h3>Templates</h3></div>
+            <div class="card-body" id="annexureList" style="padding:8px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div><h3 id="annexureTitle">Select a template</h3><div class="desc" id="annexureSubtitle"></div></div>
+              <button class="pill-btn" id="btnDownloadAnnexure" disabled>⇩ Download as Word (.doc)</button>
+            </div>
+            <div class="card-body">
+              <div class="field-row" id="annexureFieldsTop"></div>
+              <hr class="sep">
+              <label class="field-label">Preview (editable — click into the text to fine-tune before download)</label>
+              <div class="doc-preview" id="annexurePreview" contenteditable="true">Choose a template on the left to begin.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= LIBRARY ================= -->
+      <div class="view" id="view-library">
+        <h2 class="view-title">ESDS Capability Library</h2>
+        <p class="view-desc">This is the single source of truth Drishti compares every RFP against. Keep it current — better data here means a sharper fit report.</p>
+
+        <div class="tabs">
+          <div class="tab active" data-libtab="company">Company &amp; Financials</div>
+          <div class="tab" data-libtab="compliance">Certifications &amp; DCs</div>
+          <div class="tab" data-libtab="infra">Infrastructure &amp; AI</div>
+          <div class="tab" data-libtab="products">Products &amp; SLA</div>
+          <div class="tab" data-libtab="refprojects">Reference Projects</div>
+          <div class="tab" data-libtab="customrules">Custom Rules</div>
+          <div class="tab" data-libtab="signatory">Signatory</div>
+        </div>
+
+        <div class="tabpanel active" id="lib-company">
+          <div class="card"><div class="card-body">
+            <div class="field-row">
+              <div class="field"><label class="field-label">Legal entity name</label><input type="text" id="f_companyName"></div>
+              <div class="field"><label class="field-label">Founded (year)</label><input type="number" id="f_founded"></div>
+            </div>
+            <div class="field"><label class="field-label">Headquarters</label><input type="text" id="f_hq"></div>
+            <div class="field"><label class="field-label">Global footprint</label><input type="text" id="f_footprint"></div>
+            <div class="field"><label class="field-label">Client base / scale (used to demonstrate track record)</label><textarea id="f_clients"></textarea></div>
+            <div class="field-row">
+              <div class="field"><label class="field-label">CIN</label><input type="text" id="f_cin"></div>
+              <div class="field"><label class="field-label">PAN</label><input type="text" id="f_pan"></div>
+              <div class="field"><label class="field-label">GSTIN</label><input type="text" id="f_gst"></div>
+            </div>
+            <hr class="sep">
+            <label class="field-label">Annual turnover — last 3 audited financial years (₹ Crore)</label>
+            <div id="turnoverRows"></div>
+            <div class="small-muted" style="margin-top:6px;">Average turnover: <b id="avgTurnoverPreview">—</b> Cr</div>
+            <hr class="sep">
+            <div class="field-row">
+              <div class="field"><label class="field-label">Total qualifying FTEs</label><input type="number" id="f_fte"></div>
+              <div class="field"><label class="field-label">FTE qualifying note</label><input type="text" id="f_fteNote"></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="tabpanel" id="lib-compliance">
+          <div class="grid grid-2">
+            <div class="card"><div class="card-head"><h3>Certifications held</h3></div><div class="card-body" id="certList"></div>
+              <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddCert">+ Add certification</button></div>
+            </div>
+            <div class="card"><div class="card-head"><h3>Data centres</h3></div><div class="card-body" id="dcList"></div>
+              <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddDC">+ Add data centre</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="lib-infra">
+          <div class="card"><div class="card-body">
+            <div class="field-row">
+              <div class="field"><label class="field-label">Compute capacity (VMs, ready to quote)</label><input type="number" id="f_computeVMs"></div>
+              <div class="field"><label class="field-label">Storage capacity (PB)</label><input type="number" id="f_storagePB"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label class="field-label">GPU nodes available</label><input type="number" id="f_gpuNodes"></div>
+              <div class="field"><label class="field-label">AI storage (PB)</label><input type="number" id="f_aiStoragePB"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label class="field-label">Network backbone (Gbps)</label><input type="number" id="f_networkGbps"></div>
+              <div class="field"><label class="field-label">GPU orchestration platform</label><input type="text" id="f_orchestration"></div>
+            </div>
+            <div class="field"><label class="field-label">GPU families supported (comma separated)</label><input type="text" id="f_gpuFamilies"></div>
+            <hr class="sep">
+            <div class="field-row">
+              <div class="field"><label class="field-label">Committed RPO (minutes)</label><input type="number" id="f_rpo"></div>
+              <div class="field"><label class="field-label">Committed RTO (minutes)</label><input type="number" id="f_rto"></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="tabpanel" id="lib-products">
+          <div class="card"><div class="card-head"><h3>SWARAJ product portfolio</h3></div><div class="card-body" id="productList"></div>
+            <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddProduct">+ Add product</button></div>
+          </div>
+          <div class="card" style="margin-top:16px;"><div class="card-head"><h3>SLA / availability commitments</h3></div><div class="card-body" id="slaList"></div>
+            <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddSLA">+ Add SLA line</button></div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="lib-refprojects">
+          <p class="small-muted">Used to auto-suggest the closest reference project to cite for each RFP, and seeded into first-draft proposals.</p>
+          <div class="card"><div class="card-body" id="refProjectList"></div>
+            <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddRefProject">+ Add reference project</button></div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="lib-customrules">
+          <p class="small-muted">No-code rule builder — add a detection pattern once and it appears automatically in "Requirement-by-requirement" on every future analysis. One capture group in the pattern (in parentheses) should capture the number the RFP is asking for.</p>
+          <div class="card"><div class="card-body" id="customRuleList"></div>
+            <div class="card-body" style="padding-top:0;"><button class="pill-btn secondary" id="btnAddCustomRule">+ Add custom rule</button></div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="lib-signatory">
+          <div class="card"><div class="card-body">
+            <p class="small-muted">Used to auto-fill the signature block when generating annexures.</p>
+            <div class="field-row">
+              <div class="field"><label class="field-label">Name</label><input type="text" id="f_sigName"></div>
+              <div class="field"><label class="field-label">Designation</label><input type="text" id="f_sigDesig"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label class="field-label">Mobile</label><input type="text" id="f_sigMobile"></div>
+              <div class="field"><label class="field-label">Email</label><input type="text" id="f_sigEmail"></div>
+            </div>
+            <div class="field"><label class="field-label">Registered address</label><textarea id="f_sigAddress"></textarea></div>
+          </div></div>
+        </div>
+
+        <div style="margin-top:18px;"><button class="pill-btn" id="btnSaveLibrary">Save capability library</button> <span class="small-muted" id="saveLibStatus"></span></div>
+      </div>
+
+      <!-- ================= HISTORY ================= -->
+      <div class="view" id="view-history">
+        <h2 class="view-title">Past Analyses</h2>
+        <p class="view-desc">Stored locally in this browser only — a light pipeline tracker for the RFPs you've run through Drishti.</p>
+
+        <div class="grid grid-4" id="pipelineStats" style="margin-bottom:18px;"></div>
+
+        <div class="card">
+          <div class="card-head"><div><h3>All analyses</h3></div>
+            <input type="file" id="importAnalysisInput" accept=".json" style="display:none;">
+            <button class="pill-btn secondary" id="btnImportAnalysis">⇧ Import a shared analysis (.json)</button>
+          </div>
+          <div class="table-wrap">
+          <table><thead><tr><th>Tender</th><th>Analysed on</th><th>Fit score</th><th>Met / Partial / Gap</th><th>Status</th><th></th></tr></thead>
+          <tbody id="historyTableBody"></tbody></table>
+        </div></div>
+      </div>
+
+      <!-- ================= SETTINGS ================= -->
+      <div class="view" id="view-settings">
+        <h2 class="view-title">Settings &amp; Data</h2>
+        <p class="view-desc">Everything here is stored in this browser's local storage. Export regularly if you use Drishti on more than one machine.</p>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Capability Library backup</h3></div>
+            <div class="card-body">
+              <p class="small-muted">Move your ESDS Capability Library between devices or share it with a teammate.</p>
+              <button class="pill-btn secondary" id="btnExportKB">⇩ Export library (.json)</button>
+              <div style="margin-top:10px;">
+                <input type="file" id="importKBInput" accept=".json" style="display:none;">
+                <button class="pill-btn secondary" id="btnImportKB">⇧ Import library (.json)</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Reset</h3></div>
+            <div class="card-body">
+              <p class="small-muted">Restore the ESDS Capability Library to the factory defaults shipped with Drishti. Past analyses are not affected.</p>
+              <button class="pill-btn danger" id="btnResetKB">Reset capability library to defaults</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head"><h3>Clear everything</h3></div>
+          <div class="card-body">
+            <p class="small-muted">Wipes the capability library, saved analyses and any stored API key from this browser.</p>
+            <button class="pill-btn danger" id="btnClearAll">Clear all local data</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer style="text-align:center; padding:16px 20px; border-top:1px solid var(--border); background:#fff; font-size:12px; color:var(--text-mute);">
+      Developed by <b style="color:var(--text-soft);">Bhagwat Dhanore</b> — Solution Architect · © 2026 ESDS Software Solution Ltd. All rights reserved.
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SWARAJ Drishti — RFP Fit Analyser
+   Pure client-side. No backend. Safe for GitHub Pages.
+   ============================================================ */
+
+/* ---------------- Default ESDS Capability Library ---------------- */
+const DEFAULT_KB = {
+  company: {
+    name: "ESDS Software Solution Ltd.",
+    founded: 2005,
+    hq: "Plot No. B-24 & 25, NICE Industrial Area, Satpur MIDC Road, Nashik, Maharashtra – 422 007",
+    footprint: "19 nations across APAC, Europe, Middle East, Americas and Africa",
+    clients: "750+ organisations onboarded; 470+ banks; 1,300+ enterprise & government clients; 40,000+ customers; services reaching ~360 million Indian citizens weekly.",
+    cin: "U72200MH2005PLC155433",
+    pan: "",
+    gst: ""
+  },
+  turnover: [
+    { year: "FY 2022-23", crore: 201.37 },
+    { year: "FY 2023-24", crore: 281.36 },
+    { year: "FY 2024-25", crore: 357.42 }
+  ],
+  manpower: { fte: 250, note: "Full-time employees on ESDS payroll with 5+ years of IT/DC Operations / Web Portal development experience." },
+  certifications: [
+    "ISO 27001:2022 — Information Security Management",
+    "ISO 27017:2015 — Cloud Security",
+    "ISO 27018:2014 — Cloud Privacy",
+    "ISO 9001:2015 — Quality Management",
+    "ISO 20000 — IT Service Management",
+    "ISO 22301 — Business Continuity",
+    "ISO 42001:2023 — AI Management System",
+    "CMMI Level 5",
+    "PCI DSS 4.0",
+    "AICPA SOC 1 / SOC 2 / SOC 3",
+    "TIA-942 — Tier III rated (all locations)",
+    "MeitY Empanelled Cloud Service Provider (CSP)",
+    "STQC Audited CSP",
+    "CERT-In aligned",
+    "DPDP Act aligned",
+    "SAP Certified — Cloud / HANA Operations"
+  ],
+  dataCentres: [
+    { location: "Nashik, Maharashtra", tier: "Tier III", note: "Flagship — largest facility" },
+    { location: "Airoli, Navi Mumbai", tier: "Tier III", note: "Financial-hub uptime" },
+    { location: "Bengaluru", tier: "Tier III", note: "GPU-ready, AI-monitored" },
+    { location: "Mohali", tier: "Tier III", note: "North India — DR pairing zone" },
+    { location: "Noida", tier: "Tier III", note: "NCR — MeitY empanelled" },
+    { location: "Kolkata", tier: "Tier III", note: "Eastern India" },
+    { location: "Ghaziabad", tier: "Tier III", note: "CII Sahibabad, NCR" }
+  ],
+  infra: {
+    computeVMs: 1500,
+    storagePB: 70,
+    gpuNodes: 250,
+    aiStoragePB: 50,
+    networkGbps: 100,
+    gpuFamilies: "NVIDIA H100, NVIDIA H200, NVIDIA B200, NVIDIA B300, NVIDIA GB200, NVIDIA L40S, AMD MI300X",
+    orchestration: "Kubernetes-native GPU orchestration via Swaraj AIOps (Enlight AIOps) — multi-tenant GPU pools, MLOps lifecycle, AI observability & drift detection"
+  },
+  dr: { rpoMinutes: 15, rtoMinutes: 30 },
+  slas: [
+    { scope: "Compute, storage, virtualisation, cloud management, backup & monitoring", pct: 99.90 },
+    { scope: "Network connectivity within IaaS platform, firewall & perimeter security", pct: 99.95 },
+    { scope: "IAM/MFA, endpoint security management, vulnerability management, SIEM/log management", pct: 99.90 }
+  ],
+  products: [
+    { name: "Swaraj Cloud", desc: "Sovereign IaaS — patented vertical + horizontal auto-scaling, pay-per-consume metering" },
+    { name: "Swaraj Bodhi", desc: "Unified sovereign AI operations platform — GPU infra, Kubernetes-native orchestration, MLOps" },
+    { name: "Swaraj Garuda", desc: "Full-stack APM & observability — AI-driven root cause analysis, synthetic monitoring" },
+    { name: "Swaraj Jatayoo", desc: "Database Activity Monitoring & Data Security Posture Management (DSPM)" },
+    { name: "Swaraj Hansa", desc: "AI-powered agentic SIEM / SOAR — threat detection, automated containment" },
+    { name: "Swaraj Nandi", desc: "Privileged Identity & Access Management (PIM/PAM) — vaulted credentials, session recording" },
+    { name: "eMagic", desc: "EMS / NMS — infrastructure, device & link monitoring feeding the 24x7 NOC" },
+    { name: "Enlight AIOps", desc: "Sovereign AI operations control plane — GPU orchestration, MLOps, governance & cost attribution" }
+  ],
+  referenceProjects: [
+    { name: "Nashik-Trimbakeshwar Kumbh Mela 2027", client: "NTKMA (Govt of Maharashtra)", scope: "Sovereign cloud, AI/GPU infrastructure, cybersecurity, DR and 24x7 managed operations for a 12-crore-footfall public event", keywords: "kumbh mela government event cctv video analytics gpu ai iccc command centre dr rpo rto sovereign cloud data centre" },
+    { name: "SAP Cloud Hosting DC-DR", client: "Confidential enterprise", scope: "18-section infrastructure design and 3-year TCO commercial for a greenfield SAP private cloud, DC + DR", keywords: "sap hana private cloud dc dr tco enterprise hosting migration" },
+    { name: "GPUaaS for Groots (Glitch 9)", client: "Groots", scope: "GPU rental (L40S/H200) commercial and RGS for an AI video generation workload migrating from GCP", keywords: "gpu gpuaas ai video generation cloud migration rental l40s h200" },
+    { name: "Gate Automation Infrastructure", client: "Confidential", scope: "Cloud-hosted gate automation BOM across DC + DR, API gateway, WAF, SIEM, VAPT, warm-standby DR", keywords: "gate automation api gateway waf siem vapt warm standby dr iot" },
+    { name: "SOC RGS — NIT Rourkela", client: "NIT Rourkela", scope: "Security Operations Centre scoping and commercial BOQ for an educational institution network (~16,500 users)", keywords: "soc security operations centre education network checkpoint aruba vmware boq" },
+    { name: "Smart Water Tanker Management", client: "Confidential (Government)", scope: "IoT/GPS-based water tanker management platform — RGS and Private Cloud commercial BOQ (CAPEX + 3-yr OPEX)", keywords: "iot gps smart water tanker management ucc zone infrastructure government capex opex" }
+  ],
+  customRules: [],
+  annexureTemplates: [
+    {
+      id: "turnover",
+      title: "Turnover Certificate",
+      subtitle: "Certificate for Turnover of Bidder from IT/ITES, signed by Company Secretary / Statutory Auditor",
+      fields: [{id:"tender_subject", label:"Tender / project subject", placeholder:"e.g. EOI for Setting up of Cloud Based IT Infrastructure for …"}],
+      body: (kb, f) => `Certificate for Turnover of Bidder from IT/ITES
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+This is to certify that the Annual Turnover from IT/ITES as per the books and records of ${kb.company.name} for the following financial years is as under:
+
+${kb.turnover.map(t=>`${t.year} — INR ${t.crore.toFixed(2)} Crore`).join("\n")}
+Average Turnover — INR ${avgTurnover(kb).toFixed(2)} Crore
+
+We further certify that the undersigned is a competent officer of the company authorised to make this declaration.
+
+Yours sincerely,
+For ${kb.company.name}
+
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "manpower",
+      title: "Manpower Undertaking",
+      subtitle: "Undertaking for full-time professionals on company payroll",
+      fields: [{id:"tender_subject", label:"Tender / project subject", placeholder:"e.g. EOI for Setting up of Cloud Based IT Infrastructure for …"}],
+      body: (kb, f) => `Undertaking for Full-Time Professionals Working on Company's Payroll
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Undertaking for Technically Qualified Full-Time Professionals on Company's Payroll — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+I have carefully gone through the Terms & Conditions contained in the tender document for "${f.tender_subject || "[Tender / EOI subject]"}". I hereby declare that my company ${kb.company.name} has ${kb.manpower.fte}+ full-time professionals working in the business unit, each with more than 5 years of experience in IT/ITES / Data Centre Operations, as on the date of bid submission.
+
+I further certify that the undersigned is a competent officer of the company authorised to make this declaration.
+
+Yours sincerely,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "compute_storage",
+      title: "Compute & Storage Self-Certification",
+      subtitle: "Self-declaration of compute (VM) and storage capacity at DC & DR",
+      fields: [
+        {id:"tender_subject", label:"Tender / project subject", placeholder:""},
+        {id:"vms", label:"Compute capacity to declare (VMs)", placeholder: "", default: ""},
+        {id:"storage", label:"Storage capacity to declare (PB)", placeholder: "", default: ""}
+      ],
+      body: (kb, f) => `Self-Certification for Compute & Storage at DC & DR
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Self-Declaration for Compute and Storage Capacity at Data Centre (DC) & Disaster Recovery (DR) — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+We, ${kb.company.name}, hereby declare that our proposed Data Centre (DC) and Disaster Recovery (DR) infrastructure has the following minimum compute and storage capacity available to support the requirements of this project:
+
+1. Total Compute Capacity (Virtual Machines): ${f.vms || kb.infra.computeVMs} VMs
+2. Total Storage Capacity: ${f.storage || kb.infra.storagePB} PB
+
+We further confirm that the above-mentioned capacities are available within the proposed DC and DR infrastructure, and that this declaration is submitted in support of the technical evaluation criteria relating to Compute and Storage Capacity.
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "gpu_nodes",
+      title: "GPU Nodes Self-Certification",
+      subtitle: "Self-declaration of GPU node availability at DC & DR",
+      fields: [
+        {id:"tender_subject", label:"Tender / project subject", placeholder:""},
+        {id:"gpu_nodes", label:"GPU nodes to declare", placeholder:""}
+      ],
+      body: (kb, f) => `Self-Certification for GPU Nodes Availability at DC & DR
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Self-Declaration for Availability of GPU Nodes at Proposed DC & DR — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+We, ${kb.company.name}, hereby declare that the proposed Data Centre (DC) and Disaster Recovery (DR) infrastructure has the following GPU node capacity available to support Video Analytics, Artificial Intelligence (AI), AI Inferencing, Machine Learning (ML) and Deep Learning workloads for the proposed project:
+
+Total GPU Nodes available at the proposed DC & DR: ${f.gpu_nodes || kb.infra.gpuNodes} Nodes
+
+We further certify that the declared GPU Nodes are available within the proposed DC and DR infrastructure and are capable of supporting the above workloads, and that the information furnished is true and correct to the best of our knowledge and belief.
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "gpu_ai_infra",
+      title: "GPU-Based AI Infrastructure Self-Certification",
+      subtitle: "OEM partnership + Kubernetes/OpenShift orchestration declaration",
+      fields: [{id:"tender_subject", label:"Tender / project subject", placeholder:""}],
+      body: (kb, f) => `Self-Certification for GPU-Based AI Infrastructure at DC & DR
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Self-Declaration for GPU-Based AI Infrastructure at Proposed DC & DR — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+We, ${kb.company.name}, hereby certify that the proposed Data Centre (DC) and Disaster Recovery (DR) infrastructure includes:
+
+• Valid GPU OEM Partnership / Authorisation for the proposed GPU solution (${kb.infra.gpuFamilies}).
+• ${kb.infra.orchestration}.
+
+We further declare that the above information is true and correct. The Purchaser may verify the same during technical evaluation or contract execution.
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "ai_storage",
+      title: "AI Storage Self-Certification",
+      subtitle: "Self-declaration of AI-ready storage capacity",
+      fields: [
+        {id:"tender_subject", label:"Tender / project subject", placeholder:""},
+        {id:"ai_storage", label:"AI storage to declare (PB)", placeholder:""}
+      ],
+      body: (kb, f) => `Self-Certification for AI Storage at DC & DR
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Self-Declaration for AI Storage at DC & DR — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+We, ${kb.company.name}, hereby certify that the proposed Data Centre (DC) and Disaster Recovery (DR) have AI-ready storage infrastructure with an available storage capacity of ${f.ai_storage || kb.infra.aiStoragePB} PB to support AI/ML, Deep Learning, Generative AI, Video Analytics and other data-intensive workloads.
+
+We further declare that the above information is true and correct. The Purchaser reserves the right to verify the declared storage capacity during technical evaluation or contract execution.
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "network_backbone",
+      title: "Network Backbone Self-Certification",
+      subtitle: "Self-declaration of dedicated backbone bandwidth at DC & DR",
+      fields: [
+        {id:"tender_subject", label:"Tender / project subject", placeholder:""},
+        {id:"gbps", label:"Backbone bandwidth to declare (Gbps)", placeholder:""}
+      ],
+      body: (kb, f) => `Self-Certification for Network Backbone at DC & DR
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Subject: Self-Declaration for Network Backbone at DC & DR — ${f.tender_subject || "[Tender / EOI subject]"}
+
+Dear Sir/Madam,
+
+We, ${kb.company.name}, hereby certify that the proposed Data Centre (DC) and Disaster Recovery (DR) have a dedicated network backbone capacity of ${f.gbps || kb.infra.networkGbps} Gbps to support the proposed cloud infrastructure and associated workloads.
+
+We further declare that the above information is true and correct. The Purchaser reserves the right to verify the declared network backbone capacity during technical evaluation or contract execution.
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    },
+    {
+      id: "blank",
+      title: "Blank / custom annexure",
+      subtitle: "Start from a plain letterhead and write your own",
+      fields: [{id:"tender_subject", label:"Subject line", placeholder:""}],
+      body: (kb, f) => `${f.tender_subject || "[Subject]"}
+
+Date: ${todayStr()}
+
+To
+${f.authority || "The Tender Inviting Authority"}
+
+Dear Sir/Madam,
+
+[Write your annexure content here]
+
+Yours faithfully,
+
+(${kb.signatory.name})
+${kb.signatory.designation}
+${kb.company.name}
+Mobile: ${kb.signatory.mobile} | Email: ${kb.signatory.email}`
+    }
+  ],
+  signatory: {
+    name: "Lokesh Sharma",
+    designation: "Vice President – Sales",
+    mobile: "+91 9765493344",
+    email: "lokesh.sharma@esds.co.in",
+    address: "Plot No. B-24 & 25, NICE Industrial Area, Satpur MIDC, Nashik – 422 007"
+  }
+};
+
+function todayStr(){ return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'}); }
+function avgTurnover(kb){ const t = kb.turnover; return t.reduce((a,b)=>a+Number(b.crore||0),0) / (t.length||1); }
+
+/* ---------------- Storage helpers ---------------- */
+const LS_KB = 'swarajDrishti_kb_v1';
+const LS_HISTORY = 'swarajDrishti_history_v1';
+const LS_AIKEY = 'swarajDrishti_aikey_v1';
+
+function loadKB(){
+  try{
+    const raw = localStorage.getItem(LS_KB);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_KB));
+}
+function saveKB(kb){ localStorage.setItem(LS_KB, JSON.stringify(kb)); }
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(LS_HISTORY))||[]; }catch(e){ return []; } }
+function saveHistory(h){ localStorage.setItem(LS_HISTORY, JSON.stringify(h.slice(0,25))); }
+
+let KB = loadKB();
+let currentAnalysis = null;
+
+/* ================= NAVIGATION ================= */
+const viewTitles = {
+  dashboard:"Dashboard", upload:"Upload & Analyse RFP", results:"Analysis Report",
+  annexures:"ESDS Certificate Templates", library:"Capability Library", history:"Past Analyses", settings:"Settings & Data"
+};
+function go(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  document.getElementById('crumbCurrent').textContent = viewTitles[view] || view;
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.navitem[data-view]').forEach(el=>{
+  el.addEventListener('click', ()=>go(el.dataset.view));
+});
+document.getElementById('btnGoUpload').addEventListener('click', ()=>go('upload'));
+
+/* clock */
+function tickClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleString('en-IN', {weekday:'short', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+tickClock(); setInterval(tickClock, 30000);
+
+/* generic tab switcher for [data-tab] groups inside results */
+document.querySelectorAll('.tabs .tab[data-tab]').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    const group = tab.parentElement;
+    group.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const panelId = 'tab-'+tab.dataset.tab;
+    document.querySelectorAll('.tabpanel').forEach(p=>{ if(p.id.startsWith('tab-')) p.classList.remove('active'); });
+    document.getElementById(panelId).classList.add('active');
+  });
+});
+document.querySelectorAll('.tabs .tab[data-libtab]').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    const group = tab.parentElement;
+    group.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('[id^="lib-"]').forEach(p=>p.classList.remove('active'));
+    document.getElementById('lib-'+tab.dataset.libtab).classList.add('active');
+  });
+});
+
+/* ================= FILE EXTRACTION ================= */
+if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+
+/* Line-aware PDF extraction: groups text items by y-position so table/column layout
+   (BOQs, annexure grids) survives reasonably well as plain text, and tags each page
+   with a [[PAGE n]] marker so detected annexures can report "found on page N". */
+async function extractPdfText(arrayBuffer, onProgress){
+  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  let text = '';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const lines = [];
+    content.items.forEach(item=>{
+      const y = Math.round(item.transform[5]);
+      let line = lines.find(l=>Math.abs(l.y-y)<=2);
+      if(!line){ line = {y, items:[]}; lines.push(line); }
+      line.items.push(item);
+    });
+    lines.sort((a,b)=>b.y-a.y);
+    const pageText = lines.map(l=>{
+      l.items.sort((a,b)=>a.transform[4]-b.transform[4]);
+      let lineStr=''; let lastEndX=null;
+      l.items.forEach(it=>{
+        const x = it.transform[4];
+        if(lastEndX!==null && (x-lastEndX)>16){ lineStr += '    '; }
+        else if(lastEndX!==null && (x-lastEndX)>2){ lineStr += ' '; }
+        lineStr += it.str;
+        lastEndX = x + (it.width||0);
+      });
+      return lineStr;
+    }).join('\n');
+    text += `\n[[PAGE ${i}]]\n` + pageText + '\n';
+    if(onProgress) onProgress(i/pdf.numPages);
+  }
+  return text;
+}
+async function extractDocxHtml(arrayBuffer){
+  const result = await mammoth.convertToHtml({arrayBuffer}, { includeDefaultStyleMap:true });
+  return result.value;
+}
+function readFileAsText(file){
+  return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsText(file); });
+}
+function readFileAsArrayBuffer(file){
+  return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); });
+}
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+
+/* Splits a DOCX's converted HTML into an ordered list of top-level blocks (paragraphs,
+   tables, lists…) and a matching plain-text concatenation so heading matches found in the
+   plain text can be mapped back to real HTML blocks — this is what lets a downloaded
+   annexure keep its original table formatting instead of collapsing into flat text. */
+function buildBlockIndexFromHtml(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const blocks = Array.from(doc.body.children);
+  let concat = ''; const offsets = [];
+  blocks.forEach(b=>{
+    offsets.push({start:concat.length, block:b});
+    concat += (b.innerText || b.textContent || '') + '\n';
+  });
+  return {concat, offsets};
+}
+function blockIndexForCharIndex(offsets, idx){
+  for(let i=offsets.length-1;i>=0;i--){ if(offsets[i].start<=idx) return i; }
+  return 0;
+}
+
+/* ---- Annexure / Schedule / Appendix / BOQ / Proforma heading detection ---- */
+function detectAnnexureHeadings(text){
+  const candidates = [];
+  let m;
+  const reNumbered = /\b(Annexure|Appendix|Schedule|Proforma|Form)\s*[-–—:\.]?\s*([IVXLC]{1,6}|[A-Z]{1,2}|\d{1,3})\b\s*[:\-–—\.]?\s*([^\n\[]{0,90})/g;
+  while((m = reNumbered.exec(text))){
+    const title = (m[3]||'').replace(/[:\-–—\.\s]+$/,'').trim();
+    candidates.push({
+      key: (m[1]+' '+m[2]).toLowerCase().replace(/\s+/g,' '),
+      label: `${cap(m[1])} ${m[2]}${title ? ' — '+title : ''}`,
+      index: m.index
+    });
+  }
+  const specials = [
+    {re:/BILL\s+OF\s+QUANTIT(?:Y|IES)[^\n\[]{0,70}/gi, label:'Bill of Quantities (BOQ)'},
+    {re:/\bBOQ\b[^\n\[]{0,70}/g, label:'BOQ'},
+    {re:/PRICE\s+BID\s+FORMAT[^\n\[]{0,70}/gi, label:'Price Bid Format'},
+    {re:/FINANCIAL\s+BID\s+FORMAT[^\n\[]{0,70}/gi, label:'Financial Bid Format'},
+    {re:/TECHNICAL\s+BID\s+FORMAT[^\n\[]{0,70}/gi, label:'Technical Bid Format'},
+    {re:/COMPLIANCE\s+(?:SHEET|STATEMENT)[^\n\[]{0,70}/gi, label:'Compliance Sheet'},
+    {re:/CHECKLIST\s+OF\s+DOCUMENTS?[^\n\[]{0,70}/gi, label:'Checklist of Documents'},
+    {re:/BID\s+SECURING\s+DECLARATION[^\n\[]{0,70}/gi, label:'Bid Securing Declaration'},
+    {re:/MANUFACTURER'?S?\s+AUTHORI[SZ]ATION\s+FORM[^\n\[]{0,70}/gi, label:'Manufacturer Authorisation Form (MAF)'},
+    {re:/LETTER\s+OF\s+AUTHORI[SZ]ATION[^\n\[]{0,70}/gi, label:'Letter of Authorisation'},
+    {re:/SELF[- ]CERTIFICAT(?:E|ION)[^\n\[]{0,70}/gi, label:'Self-Certification Format'}
+  ];
+  specials.forEach(s=>{
+    let mm; s.re.lastIndex = 0;
+    while((mm = s.re.exec(text))){ candidates.push({ key:s.label.toLowerCase(), label:s.label, index:mm.index }); }
+  });
+
+  // A heading usually appears once in a table of contents and again at the real section —
+  // assume the LAST occurrence of a given label is the actual section start.
+  const byKey = {};
+  candidates.forEach(c=>{ if(!byKey[c.key] || c.index>byKey[c.key].index) byKey[c.key]=c; });
+  return Object.values(byKey).sort((a,b)=>a.index-b.index);
+}
+
+function sliceAnnexuresFromPlainText(text, headings){
+  return headings.map((h,i)=>{
+    const end = i+1<headings.length ? headings[i+1].index : text.length;
+    let content = text.substring(h.index, end);
+    const pageMatches = [...text.substring(0,h.index).matchAll(/\[\[PAGE (\d+)\]\]/g)];
+    const page = pageMatches.length ? pageMatches[pageMatches.length-1][1] : null;
+    content = content.replace(/\[\[PAGE \d+\]\]/g,'').trim();
+    return { label:h.label, page, content, length:content.length, kind:'text' };
+  }).filter(a=>a.length>80);
+}
+
+function sliceAnnexuresFromHtmlBlocks(offsets, headings, textLen){
+  const blocks = offsets.map(o=>o.block);
+  return headings.map((h,i)=>{
+    const startBlock = blockIndexForCharIndex(offsets, h.index);
+    const endCharIdx = i+1<headings.length ? headings[i+1].index : textLen;
+    let endBlock = blockIndexForCharIndex(offsets, endCharIdx);
+    if(endBlock<=startBlock) endBlock = startBlock+1;
+    const chosen = blocks.slice(startBlock, endBlock);
+    const htmlContent = chosen.map(b=>b.outerHTML).join('\n');
+    const textContent = chosen.map(b=>b.innerText||b.textContent||'').join('\n').trim();
+    return { label:h.label, page:null, content:textContent, htmlContent, length:textContent.length, kind:'html' };
+  }).filter(a=>a.length>80);
+}
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', ()=>fileInput.click());
+['dragenter','dragover'].forEach(evt=>dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(evt=>dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e=>{ const files = Array.from(e.dataTransfer.files||[]); if(files.length) handleFiles(files); });
+fileInput.addEventListener('change', e=>{ const files = Array.from(e.target.files||[]); if(files.length) handleFiles(files); });
+
+document.getElementById('btnAnalysePasted').addEventListener('click', ()=>{
+  const txt = document.getElementById('pasteText').value.trim();
+  if(!txt){ alert('Paste some RFP text first.'); return; }
+  const headings = detectAnnexureHeadings(txt);
+  const annexures = sliceAnnexuresFromPlainText(txt, headings);
+  runAnalysis(txt, 'Pasted text', annexures);
+});
+
+/* Extracts text + annexures from a single file, without touching any UI —
+   used by handleFiles() so multiple documents can be processed in sequence
+   and then merged into one combined analysis. */
+async function extractFromFile(file, onPdfPageProgress){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    const buf = await readFileAsArrayBuffer(file);
+    const raw = await extractPdfText(buf, onPdfPageProgress);
+    const headings = detectAnnexureHeadings(raw);
+    const annexures = sliceAnnexuresFromPlainText(raw, headings);
+    return { text: raw.replace(/\[\[PAGE \d+\]\]/g,''), annexures };
+  }
+  if(ext==='docx'){
+    const buf = await readFileAsArrayBuffer(file);
+    const html = await extractDocxHtml(buf);
+    const {concat, offsets} = buildBlockIndexFromHtml(html);
+    const headings = detectAnnexureHeadings(concat);
+    const annexures = sliceAnnexuresFromHtmlBlocks(offsets, headings, concat.length);
+    return { text: concat, annexures };
+  }
+  const text = await readFileAsText(file);
+  const headings = detectAnnexureHeadings(text);
+  const annexures = sliceAnnexuresFromPlainText(text, headings);
+  return { text, annexures };
+}
+
+async function handleFiles(files){
+  document.getElementById('fileChipWrap').innerHTML = files.map(f=>`<div class="file-chip">📄 ${f.name}</div>`).join(' ');
+  const progWrap = document.getElementById('uploadProgressWrap');
+  const progBar = document.getElementById('uploadProgressBar');
+  const statusText = document.getElementById('uploadStatusText');
+  progWrap.style.display='block'; progBar.style.width='3%';
+
+  const multi = files.length > 1;
+  const perFileResults = [];
+
+  try{
+    for(let i=0; i<files.length; i++){
+      const file = files[i];
+      statusText.textContent = multi ? `Reading ${file.name} (file ${i+1} of ${files.length})…` : `Reading ${file.name}…`;
+      const { text, annexures } = await extractFromFile(file, p=>{
+        progBar.style.width = (3 + ((i+p)/files.length)*85) + '%';
+      });
+      progBar.style.width = (3 + ((i+1)/files.length)*85) + '%';
+      perFileResults.push({
+        name: file.name,
+        text,
+        annexures: annexures.map(a => multi ? {...a, sourceFile: file.name} : a)
+      });
+    }
+
+    const combinedText = perFileResults.length===1
+      ? perFileResults[0].text
+      : perFileResults.map(r => `\n\n===== SOURCE FILE: ${r.name} =====\n\n` + r.text).join('\n');
+    const combinedAnnexures = perFileResults.flatMap(r => r.annexures);
+    const combinedName = multi ? `${files.length} files — ${files.map(f=>f.name).join(', ')}` : files[0].name;
+
+    progBar.style.width = '100%';
+    statusText.textContent = `Extracted ${combinedText.length.toLocaleString()} characters from ${files.length} file${multi?'s':''}, found ${combinedAnnexures.length} annexure section(s). Analysing…`;
+    setTimeout(()=>{ runAnalysis(combinedText, combinedName, combinedAnnexures); }, 300);
+  }catch(err){
+    console.error(err);
+    statusText.textContent = 'Could not read one of these files. Try uploading them one at a time, or paste the text instead.';
+    progBar.style.width = '0%';
+  }
+}
+
+/* ================= ANALYSIS ENGINE ================= */
+
+function findAll(text, regex){
+  const out = []; let m;
+  const r = new RegExp(regex.source, regex.flags.includes('g') ? regex.flags : regex.flags+'g');
+  while((m = r.exec(text)) !== null){ out.push(m); if(out.length>200) break; }
+  return out;
+}
+function contextSnippet(text, index, len=140){
+  const start = Math.max(0, index-len/2);
+  return text.substring(start, start+len).replace(/\s+/g,' ').trim();
+}
+
+function extractMeta(text){
+  const meta = {};
+  let m;
+
+  m = text.match(/(?:tender|eoi|rfp|nit)\s*(?:no\.?|number)\s*[:\-]?\s*([A-Za-z0-9\/\.\-]{4,40})/i);
+  meta.tenderNo = m ? m[1] : null;
+
+  m = text.match(/(?:^|[\.\n])\s*([A-Z][A-Za-z ,&\-]{6,80}(?:Authority|Corporation|Limited|Municipal Corporation|Government of [A-Za-z ]+|Department|Ministry|University|Board))/);
+  meta.authority = m ? m[1].trim() : null;
+
+  const dateMatches = findAll(text, /\b(\d{1,2}[\/\-.\s](?:0?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[\/\-.\s]\d{2,4})\b/ig);
+  const closeIdx = text.search(/last date|submission date|bid due date|closing date|eoi closes|due date for submission/i);
+  if(closeIdx>-1){
+    const near = dateMatches.find(dm => Math.abs(dm.index-closeIdx) < 200);
+    meta.submissionDate = near ? near[1] : (dateMatches[0] ? dateMatches[0][1] : null);
+  } else { meta.submissionDate = dateMatches[0] ? dateMatches[0][1] : null; }
+
+  m = text.match(/EMD[^.\n]{0,80}?(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d+)?)\s*(lakh|lakhs|crore|crores)?/i);
+  meta.emd = m ? (m[1] + (m[2]?(' '+m[2]):'')) : null;
+
+  m = text.match(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s*(?:weight(?:age)?|marks?)?[^.\n]{0,40}?technical/i);
+  meta.techWeight = m ? m[1] : null;
+
+  return meta;
+}
+
+/* Each rule: id, category, label, detect(text)->{ask, raw} or null, assess(ask,raw,kb)->{status, esds, note} */
+const RULES = [
+  {
+    id:'turnover', category:'Financial Eligibility', label:'Minimum annual / average turnover',
+    detect(text){
+      const m = text.match(/(?:annual\s+turnover|average\s+annual\s+turnover|turnover)[^.\n]{0,120}?(?:>|greater than|minimum|at least|not less than)?\s*(?:Rs\.?|INR|₹)?\s*(\d+(?:\.\d+)?)\s*(crore|cr\.?|crores)\b/i);
+      if(!m) return null;
+      return { ask: `> ₹${m[1]} Crore`, raw: parseFloat(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const latest = kb.turnover[kb.turnover.length-1]?.crore || 0;
+      const avg = avgTurnover(kb);
+      const best = Math.max(latest, avg);
+      const esds = `Avg ₹${avg.toFixed(2)} Cr over last 3 FYs (latest FY ₹${latest.toFixed(2)} Cr)`;
+      if(best >= det.raw) return {status:'met', esds, note:'ESDS turnover comfortably exceeds the stated threshold.'};
+      if(best >= det.raw*0.8) return {status:'partial', esds, note:'Close to the threshold — confirm which specific years/definition the RFP counts.'};
+      return {status:'gap', esds, note:'ESDS turnover on record is below the stated threshold — verify figures and consider a consortium/JV route if eligible.'};
+    }
+  },
+  {
+    id:'manpower', category:'Eligibility', label:'Minimum full-time employees (FTE)',
+    detect(text){
+      const m = text.match(/(\d+)\s*\+?\s*(?:FTEs?|full[- ]time employees|full[- ]time professionals|manpower)/i);
+      if(!m) return null;
+      return { ask: `${m[1]}+ FTEs`, raw: parseInt(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.manpower.fte}+ qualifying FTEs on payroll`;
+      if(kb.manpower.fte >= det.raw) return {status:'met', esds, note:'Manpower headcount exceeds the requirement.'};
+      return {status:'gap', esds, note:'Declared FTE count falls short — verify the exact qualifying criteria (experience years, function).'};
+    }
+  },
+  {
+    id:'compute', category:'Technical — Compute', label:'Compute capacity (virtual machines)',
+    detect(text){
+      const m = text.match(/(\d[\d,]*)\s*\+?\s*(?:VMs|virtual machines)\b/i);
+      if(!m) return null;
+      return { ask: `${m[1]} VMs`, raw: parseInt(m[1].replace(/,/g,'')), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.infra.computeVMs.toLocaleString()} VMs available (Swaraj Cloud, vertical + horizontal auto-scale)`;
+      if(kb.infra.computeVMs >= det.raw) return {status:'met', esds, note:'Compute floor is comfortably covered.'};
+      return {status:'partial', esds, note:'Below the stated floor on current self-certified capacity — confirm ability to burst / add capacity for this engagement.'};
+    }
+  },
+  {
+    id:'storage', category:'Technical — Storage', label:'Storage capacity',
+    detect(text){
+      const m = text.match(/(\d+(?:\.\d+)?)\s*(PB|TB)\b(?![a-zA-Z])/);
+      if(!m) return null;
+      const raw = m[2].toUpperCase()==='TB' ? parseFloat(m[1])/1000 : parseFloat(m[1]);
+      return { ask: `${m[1]} ${m[2].toUpperCase()}`, raw, index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.infra.storagePB} PB available across DC/DR`;
+      if(kb.infra.storagePB >= det.raw) return {status:'met', esds, note:'Storage floor is covered.'};
+      return {status:'partial', esds, note:'Stated capacity is below the RFP figure — confirm tiering/retention assumptions before committing.'};
+    }
+  },
+  {
+    id:'gpu', category:'Technical — GPU / AI', label:'GPU nodes at DC & DR',
+    detect(text){
+      const m = text.match(/(\d+)\s*\+?\s*(?:GPU\s*nodes|GPUs)\b/i);
+      if(!m) return null;
+      return { ask: `${m[1]} GPU nodes`, raw: parseInt(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.infra.gpuNodes} GPU nodes declared (${kb.infra.gpuFamilies})`;
+      if(kb.infra.gpuNodes >= det.raw) return {status:'met', esds, note:'GPU floor is exceeded — confirm exact model mix suits the workload (video analytics / LLM / training).'};
+      return {status:'gap', esds, note:'Declared GPU capacity is below the RFP floor — plan OEM lead time or phased scale-up.'};
+    }
+  },
+  {
+    id:'aistorage', category:'Technical — GPU / AI', label:'AI-ready storage',
+    detect(text){
+      const m = text.match(/(?:AI\s*storage)[^.\n]{0,60}?(\d+(?:\.\d+)?)\s*PB/i);
+      if(!m) return null;
+      return { ask:`${m[1]} PB AI storage`, raw: parseFloat(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.infra.aiStoragePB} PB AI-ready storage declared`;
+      if(kb.infra.aiStoragePB >= det.raw) return {status:'met', esds, note:'AI storage floor covered.'};
+      return {status:'partial', esds, note:'Confirm incremental AI storage can be committed for this scope.'};
+    }
+  },
+  {
+    id:'network', category:'Technical — Network', label:'Network backbone bandwidth',
+    detect(text){
+      const m = text.match(/(\d+)\s*\+?\s*Gbps/i);
+      if(!m) return null;
+      return { ask:`${m[1]} Gbps`, raw: parseInt(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `${kb.infra.networkGbps} Gbps dedicated backbone declared`;
+      if(kb.infra.networkGbps >= det.raw) return {status:'met', esds, note:'Backbone commitment covers the stated floor.'};
+      return {status:'gap', esds, note:'Backbone commitment on record is below the RFP figure — check carrier upgrade lead time.'};
+    }
+  },
+  {
+    id:'rpo', category:'DR / Business Continuity', label:'Recovery Point Objective (RPO)',
+    detect(text){
+      const m = text.match(/RPO[^.\n]{0,40}?(\d+)\s*(minutes|mins|min|hours|hrs|hr)/i);
+      if(!m) return null;
+      const raw = /h/i.test(m[2]) ? parseInt(m[1])*60 : parseInt(m[1]);
+      return { ask:`${m[1]} ${m[2]}`, raw, index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `RPO ≤ ${kb.dr.rpoMinutes} minutes (continuous asynchronous replication)`;
+      if(kb.dr.rpoMinutes <= det.raw) return {status:'met', esds, note:'ESDS committed RPO is at or better than the RFP requirement.'};
+      return {status:'gap', esds, note:'Standard committed RPO is looser than requested — a tighter RPO needs a design review before committing.'};
+    }
+  },
+  {
+    id:'rto', category:'DR / Business Continuity', label:'Recovery Time Objective (RTO)',
+    detect(text){
+      const m = text.match(/RTO[^.\n]{0,40}?(\d+)\s*(minutes|mins|min|hours|hrs|hr)/i);
+      if(!m) return null;
+      const raw = /h/i.test(m[2]) ? parseInt(m[1])*60 : parseInt(m[1]);
+      return { ask:`${m[1]} ${m[2]}`, raw, index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `RTO ≤ ${kb.dr.rtoMinutes} minutes (orchestrated multi-DC failover)`;
+      if(kb.dr.rtoMinutes <= det.raw) return {status:'met', esds, note:'ESDS committed RTO is at or better than the RFP requirement.'};
+      return {status:'gap', esds, note:'Standard committed RTO is looser than requested — validate with a DR drill before committing contractually.'};
+    }
+  },
+  {
+    id:'uptime', category:'SLA', label:'Uptime / availability SLA',
+    detect(text){
+      const matches = findAll(text, /(\d{2}\.\d{1,3}|\d{2})\s*%/g);
+      const near = matches.find(m => /uptime|availability|sla/i.test(contextSnippet(text, m.index, 200)));
+      const chosen = near || matches.find(m=>parseFloat(m[1])>=95);
+      if(!chosen) return null;
+      return { ask:`${chosen[1]}%`, raw: parseFloat(chosen[1]), index:chosen.index, matchLen:chosen[0].length };
+    },
+    assess(det, kb){
+      const best = Math.max(...kb.slas.map(s=>s.pct));
+      const esds = kb.slas.map(s=>`${s.pct}% — ${s.scope}`).join(' · ');
+      if(best >= det.raw) return {status:'met', esds, note:'At least one SLA tier meets or exceeds this figure — map it to the exact scope the RFP means.'};
+      return {status:'gap', esds, note:'RFP asks for a higher uptime than the standard SLA tiers — needs commercial/design review.'};
+    }
+  },
+  {
+    id:'tier', category:'Data Centre', label:'Data centre Tier rating',
+    detect(text){
+      const m = text.match(/Tier\s*[- ]?\s*(III|3|IV|4)\b/i);
+      if(!m) return null;
+      const raw = /iv|4/i.test(m[1]) ? 4 : 3;
+      return { ask:`Tier ${raw===4?'IV':'III'}`, raw, index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const esds = `All ${kb.dataCentres.length} ESDS data centres are Tier III certified (TIA-942)`;
+      if(det.raw<=3) return {status:'met', esds, note:'Tier III meets the requirement.'};
+      return {status:'gap', esds, note:'RFP asks for Tier IV — ESDS facilities are Tier III; confirm this is acceptable or plan a partner facility.'};
+    }
+  },
+  {
+    id:'experience', category:'Experience', label:'Years of relevant experience / similar projects',
+    detect(text){
+      const m = text.match(/(\d+)\s*\+?\s*years?\s*(?:of)?\s*(?:relevant\s*)?experience/i);
+      if(!m) return null;
+      return { ask:`${m[1]}+ years`, raw: parseInt(m[1]), index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      const years = new Date().getFullYear() - kb.company.founded;
+      const esds = `Operating since ${kb.company.founded} (~${years} years); ${kb.company.clients}`;
+      if(years >= det.raw) return {status:'met', esds, note:'Corporate track record exceeds the requirement — attach 2–3 comparable reference projects.'};
+      return {status:'partial', esds, note:'Confirm whether "experience" is measured at the corporate level or per-workload — cite closest reference projects.'};
+    }
+  },
+  {
+    id:'breach', category:'Security', label:'Security breach SLA / penalty clause',
+    detect(text){
+      let m = text.match(/zero[- ]tolerance[^.\n]{0,80}?(breach|penalty|termination)/i);
+      if(!m) m = text.match(/security\s+breach[^.\n]{0,80}?(penalty|liquidated damages|termination)/i);
+      if(!m) return null;
+      return { ask: m[0].trim().slice(0,100), raw:1, index:m.index, matchLen:m[0].length };
+    },
+    assess(det, kb){
+      return {status:'info', esds:'24×7 SOC (Swaraj Hansa SIEM/SOAR) with automated containment; PIM/PAM via Swaraj Nandi; DAM via Swaraj Jatayoo', note:'Automated-containment posture supports a zero-tolerance SLA, but confirm exact penalty caps and reporting timelines (e.g. CERT-In) with legal before accepting.'};
+    }
+  }
+];
+
+/* ---- KB field registry used by custom rules & the scorecard ---- */
+const KB_FIELD_OPTIONS = [
+  {value:'turnoverAvg', label:'Average turnover (₹ Cr)', get:kb=>avgTurnover(kb)},
+  {value:'manpower.fte', label:'Total FTEs', get:kb=>kb.manpower.fte},
+  {value:'infra.computeVMs', label:'Compute VMs', get:kb=>kb.infra.computeVMs},
+  {value:'infra.storagePB', label:'Storage (PB)', get:kb=>kb.infra.storagePB},
+  {value:'infra.gpuNodes', label:'GPU nodes', get:kb=>kb.infra.gpuNodes},
+  {value:'infra.aiStoragePB', label:'AI storage (PB)', get:kb=>kb.infra.aiStoragePB},
+  {value:'infra.networkGbps', label:'Network backbone (Gbps)', get:kb=>kb.infra.networkGbps},
+  {value:'dr.rpoMinutes', label:'RPO committed (minutes)', get:kb=>kb.dr.rpoMinutes},
+  {value:'dr.rtoMinutes', label:'RTO committed (minutes)', get:kb=>kb.dr.rtoMinutes}
+];
+function kbFieldValue(kb, key){ const f=KB_FIELD_OPTIONS.find(x=>x.value===key); return f ? f.get(kb) : null; }
+const UNIT_TO_KBFIELD = {
+  'crore':'turnoverAvg','cr':'turnoverAvg','cr.':'turnoverAvg',
+  'fte':'manpower.fte','ftes':'manpower.fte',
+  'node':'infra.gpuNodes','nodes':'infra.gpuNodes','gpu':'infra.gpuNodes','gpus':'infra.gpuNodes',
+  'pb':'infra.storagePB','vm':'infra.computeVMs','vms':'infra.computeVMs','gbps':'infra.networkGbps'
+};
+function guessKbFieldForUnit(unit){ return UNIT_TO_KBFIELD[(unit||'').toLowerCase().replace(/\.$/,'')] || ''; }
+
+/* ---- Custom, user-defined detection rules (no-code rule builder) ---- */
+function runCustomRules(text, kb){
+  const out = [];
+  (kb.customRules||[]).forEach(rule=>{
+    try{
+      const re = new RegExp(rule.pattern, 'i');
+      const m = text.match(re);
+      if(!m) return;
+      const askRaw = m[1]!=null ? parseFloat(String(m[1]).replace(/,/g,'')) : NaN;
+      let status='info', note='No numeric comparison possible — showing the detected text only.', esdsText='—';
+      if(!isNaN(askRaw) && rule.kbField){
+        const esdsVal = kbFieldValue(kb, rule.kbField);
+        if(esdsVal!=null){
+          const meets = rule.comparison==='lte' ? esdsVal<=askRaw : esdsVal>=askRaw;
+          status = meets ? 'met' : 'gap';
+          const fieldLabel = (KB_FIELD_OPTIONS.find(f=>f.value===rule.kbField)||{}).label || rule.kbField;
+          esdsText = `${fieldLabel}: ${esdsVal}`;
+          note = meets ? 'Custom rule — ESDS figure satisfies this ask.' : 'Custom rule — ESDS figure does not currently satisfy this ask.';
+        }
+      }
+      out.push({ category: rule.category||'Custom', label: rule.label||'Custom rule', ask: m[0].trim().slice(0,100), esds: esdsText, status, note, matchIndex:m.index, matchLen:m[0].length });
+    }catch(e){ /* invalid regex from the person — skip quietly rather than breaking the whole analysis */ }
+  });
+  return out;
+}
+
+/* ---- RFP marking-scheme detector (feeds the Scorecard tab) ---- */
+function detectMarkingScheme(text){
+  const categories = [];
+  const catRe = /([A-Za-z][A-Za-z \/&\-,]{4,70})\(Maximum\s*Marks[-:\s]*(\d+(?:\.\d+)?)\)/gi;
+  let cm;
+  while((cm = catRe.exec(text))){ categories.push({ label: cm[1].trim().replace(/\s+/g,' '), maxMarks: parseFloat(cm[2]), index: cm.index }); }
+
+  const criteria = [];
+  const baseRe = /(?:>|≥|at least|minimum|up to)?\s*(\d+(?:\.\d+)?)\s*(Crore|Cr\.?|FTEs?|Nodes?|PB|Gbps|VMs?|Mbps|GPUs?)\b[^\n]{0,15}?[-:]\s*(\d+(?:\.\d+)?)\s*%?\s*[Mm]arks?/g;
+  let bm;
+  while((bm = baseRe.exec(text))){
+    const unit = bm[2];
+    const before = text.substring(Math.max(0,bm.index-70), bm.index).replace(/\s+/g,' ').trim();
+    const labelGuess = (before.split(/[\.\n]/).pop() || '').trim().slice(-60) || `${unit} threshold`;
+    const windowText = text.substring(bm.index, bm.index+260);
+    const incMatch = windowText.match(/every additional\s*(\d+(?:\.\d+)?)\s*[A-Za-z]*[^\n]{0,40}?(\d+(?:\.\d+)?)\s*%?\s*(?:marks?|additional)/i);
+    let cat = null;
+    categories.forEach(c=>{ if(c.index<bm.index) cat = c; });
+    criteria.push({
+      label: labelGuess, unit, baseValue: parseFloat(bm[1]), baseMarks: parseFloat(bm[3]),
+      incValue: incMatch ? parseFloat(incMatch[1]) : null, incMarks: incMatch ? parseFloat(incMatch[2]) : null,
+      maxMarks: cat ? cat.maxMarks : null, categoryLabel: cat ? cat.label : null, index: bm.index
+    });
+  }
+  return { categories, criteria };
+}
+function computeCriterionMarks(row){
+  const esdsVal = parseFloat(row.esdsValue), base = parseFloat(row.baseValue);
+  if(isNaN(esdsVal) || isNaN(base) || esdsVal < base) return 0;
+  let marks = parseFloat(row.baseMarks)||0;
+  const incValue = parseFloat(row.incValue), incMarks = parseFloat(row.incMarks);
+  if(incValue>0 && !isNaN(incMarks)){ marks += Math.floor((esdsVal-base)/incValue) * incMarks; }
+  if(row.maxMarks!=='' && row.maxMarks!=null && !isNaN(parseFloat(row.maxMarks))) marks = Math.min(marks, parseFloat(row.maxMarks));
+  return marks;
+}
+
+/* ---- Closest reference project suggester ---- */
+function suggestReferenceProjects(text, kb){
+  const lower = text.toLowerCase();
+  return (kb.referenceProjects||[]).map(p=>{
+    const hay = (p.name+' '+p.client+' '+p.scope+' '+(p.keywords||'')).toLowerCase();
+    const words = [...new Set(hay.split(/[^a-z0-9]+/).filter(w=>w.length>3))];
+    const score = words.reduce((n,w)=> n + (lower.includes(w)?1:0), 0);
+    return {...p, score};
+  }).sort((a,b)=>b.score-a.score).filter(p=>p.score>0).slice(0,3);
+}
+
+/* ---- Loose date parsing for the submission-deadline countdown ---- */
+function monthIndexFromStr(str){
+  const months=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const idx = months.findIndex(mo=>str.toLowerCase().startsWith(mo));
+  return idx>=0?idx:null;
+}
+function parseLooseDate(str){
+  if(!str) return null;
+  const s = str.trim();
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2}|[A-Za-z]{3,})[\/\-.](\d{2,4})$/);
+  if(m){
+    const day = parseInt(m[1]);
+    const month = /^[A-Za-z]/.test(m[2]) ? monthIndexFromStr(m[2]) : parseInt(m[2])-1;
+    let year = parseInt(m[3]); if(year<100) year+=2000;
+    if(month!=null && !isNaN(day)) return new Date(year, month, day, 15, 0, 0);
+  }
+  m = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\.?\s+(\d{4})$/);
+  if(m){ const month = monthIndexFromStr(m[2]); if(month!=null) return new Date(parseInt(m[3]), month, parseInt(m[1]), 15, 0, 0); }
+  const d = new Date(s);
+  return !isNaN(d.getTime()) ? d : null;
+}
+function daysUntil(date){ return Math.ceil((date.getTime() - Date.now()) / 86400000); }
+function downloadICS(dateObj, title){
+  const pad=n=>String(n).padStart(2,'0');
+  const dt = `${dateObj.getFullYear()}${pad(dateObj.getMonth()+1)}${pad(dateObj.getDate())}T${pad(dateObj.getHours())}${pad(dateObj.getMinutes())}00`;
+  const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//SWARAJ Drishti//EN\nBEGIN:VEVENT\nUID:${Date.now()}@swaraj-drishti\nDTSTAMP:${dt}\nDTSTART:${dt}\nSUMMARY:${String(title).replace(/[\n,]/g,' ')}\nDESCRIPTION:Auto-generated reminder from SWARAJ Drishti.\nEND:VEVENT\nEND:VCALENDAR`;
+  const blob = new Blob([ics], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='rfp-deadline.ics'; a.click(); URL.revokeObjectURL(url);
+}
+
+function analyzeRFP(text, kb){
+  const meta = extractMeta(text);
+  meta.submissionDateParsed = parseLooseDate(meta.submissionDate);
+  const requirements = [];
+
+  RULES.forEach(rule=>{
+    const det = rule.detect(text);
+    if(det){
+      const a = rule.assess(det, kb);
+      requirements.push({ id:rule.id, category:rule.category, label:rule.label, ask:det.ask, esds:a.esds, status:a.status, note:a.note, matchIndex:det.index, matchLen:det.matchLen });
+    }
+  });
+  requirements.push(...runCustomRules(text, kb));
+
+  // ---- Generic PQ/TQ clause scanner: catches obligation-style eligibility/technical clauses that
+  // the curated RULES above don't have a specific pattern for, so genuine gaps/challenges in the RFP
+  // aren't silently invisible just because no named rule happened to match them. Anything caught here
+  // that doesn't have a clear Capability Library field to check against is marked 'partial' (needs
+  // manual verification) rather than assumed to be met.
+  (function scanGenericClauses(){
+    const alreadyCovered = new Set(requirements.map(r=>(r.matchIndex!=null? r.matchIndex : -1)));
+    const sentences = text.split(/(?<=[.;:\n])\s+/).map(s=>s.trim()).filter(s=>s.length>25 && s.length<400);
+    const obligationRe = /\b(shall|must|should|is required to|are required to|mandatory|not less than|at least|minimum of|no less than)\b/i;
+    const eligibilityRe = /\b(eligib|disqualif|blacklist|debar|non[- ]conviction|conflict of interest|sole bidder|joint venture|consortium|MSE|MSME|make in india|local content|prior experience|similar nature|litigation|arbitration|penalt|liquidated damages)\b/i;
+    const seenGeneric = new Set();
+    let count = 0;
+    let cursor = 0;
+    sentences.forEach(sentence=>{
+      if(count>=25) return; // cap so this doesn't overwhelm the table
+      const idx = text.indexOf(sentence, cursor);
+      cursor = idx>=0 ? idx + sentence.length : cursor;
+      if(idx>=0 && alreadyCovered.has(idx)) return;
+      const low = sentence.toLowerCase();
+      if(!obligationRe.test(low)) return;
+      if(!eligibilityRe.test(low)) return;
+      const key = sentence.slice(0,70).toLowerCase();
+      if(seenGeneric.has(key)) return;
+      seenGeneric.add(key);
+      count++;
+      let status='partial', note='No specific Capability Library field maps to this clause automatically — verify against actual company records before submission.';
+      let esds='Not automatically checked';
+      if(/blacklist|debar/i.test(low)){ status='info'; esds='No known blacklisting/debarment on record'; note='Confirm with Legal/Compliance before signing the non-blacklisting declaration.'; }
+      else if(/msme|mse\b/i.test(low)){ status='info'; esds=kb.company.msmeStatus || 'MSME/MSE status not recorded in Capability Library'; note='Add MSME/MSE registration status to the Capability Library if applicable, or confirm this clause does not apply.'; }
+      requirements.push({ id:'generic', category:'Additional eligibility clause (auto-detected)', label: sentence.slice(0,90)+(sentence.length>90?'…':''), ask: sentence.slice(0,160)+(sentence.length>160?'…':''), esds, status, note, matchIndex: idx>=0?idx:null, matchLen: sentence.length });
+    });
+  })();
+
+  // certifications
+  const certGaps = [];
+  const certHits = [];
+  const commonCertKeywords = ['ISO 27001','ISO 27017','ISO 27018','ISO 20000','ISO 22301','ISO 9001','CMMI','PCI DSS','SOC 2','SOC 1','STQC','MeitY','TIA-942','TIA 942','DPDP','CERT-In'];
+  commonCertKeywords.forEach(kw=>{
+    if(new RegExp(kw.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&'),'i').test(text)){
+      const owned = kb.certifications.some(c=>c.toUpperCase().includes(kw.toUpperCase().split(' ')[0]));
+      if(owned) certHits.push(kw); else certGaps.push(kw);
+    }
+  });
+  if(certHits.length || certGaps.length){
+    requirements.push({
+      category:'Compliance', label:'Certifications mentioned in the RFP',
+      ask: [...certHits, ...certGaps].join(', ') || '—',
+      esds: kb.certifications.slice(0,6).join(', ') + (kb.certifications.length>6?' …':''),
+      status: certGaps.length===0 ? 'met' : (certHits.length>0 ? 'partial':'gap'),
+      note: certGaps.length ? `Not found in the Capability Library: ${certGaps.join(', ')}. Verify and add if ESDS actually holds these.` : 'All mentioned certifications are already in the Capability Library.'
+    });
+  }
+
+  // document checklist
+  const docPatterns = [
+    { key:'Certificate of Incorporation', re:/certificate of incorporation/i, avail:'Company document — obtain from Legal/Company Secretary', esds:false },
+    { key:'GST Registration Certificate', re:/GST\s*(registration)?\s*certificate/i, avail:'Company document — obtain from Finance', esds:false },
+    { key:'PAN Card', re:/\bPAN\b(?!\w)/, avail:'Company document — obtain from Finance', esds:false },
+    { key:'Audited financial statements', re:/audited (financial statements|balance sheet)/i, avail:'Company document — obtain from Finance', esds:false },
+    { key:'Annual turnover certificate (CA/CS certified)', re:/turnover certificate|CA certificate|company secretary/i, avail:'Template available', esds:'turnover' },
+    { key:'Manpower / FTE undertaking', re:/manpower.{0,20}(undertaking|certificate)|full[- ]time (employees|professionals)/i, avail:'Template available', esds:'manpower' },
+    { key:'Compute & storage self-certification', re:/self[- ]certification.{0,20}(compute|storage)/i, avail:'Template available', esds:'compute_storage' },
+    { key:'GPU nodes self-certification', re:/self[- ]certification.{0,20}GPU|GPU nodes.{0,20}(availability|certificate)/i, avail:'Template available', esds:'gpu_nodes' },
+    { key:'GPU / AI infrastructure self-certification', re:/GPU[- ]based AI infrastructure|OEM partnership/i, avail:'Template available', esds:'gpu_ai_infra' },
+    { key:'AI storage self-certification', re:/AI storage/i, avail:'Template available', esds:'ai_storage' },
+    { key:'Network backbone self-certification', re:/network backbone/i, avail:'Template available', esds:'network_backbone' },
+    { key:'Power of Attorney / Authorisation letter', re:/power of attorney|authorisation letter|authorization letter/i, avail:'Company document — signed by authorised signatory', esds:false },
+    { key:'EMD / Bid security instrument', re:/EMD|earnest money deposit|bid security/i, avail:'Finance action — arrange BG/DD/online payment', esds:false },
+    { key:'Non-blacklisting / litigation declaration', re:/blacklist|litigation declaration|non[- ]conviction/i, avail:'Company document — Legal to issue standard declaration', esds:false },
+    { key:'Manufacturer Authorisation Form (OEM)', re:/manufacturer authorisation|MAF\b/i, avail:'Coordinate with GPU/hardware OEM partner', esds:false },
+    { key:'Work order / client reference letters', re:/work order|client reference|completion certificate/i, avail:'Pull from delivery/PMO — use reference projects in Capability Library', esds:false },
+    { key:'ISO / CMMI / SOC certificates', re:/ISO\s*27001|CMMI|SOC\s*2/i, avail:'Available — attach current certificates from compliance repository', esds:false },
+    { key:'Bank Guarantee (performance security)', re:/performance (bank )?guarantee|performance security/i, avail:'Finance action — arrange PBG from bank', esds:false },
+    { key:'Solvency certificate', re:/solvency certificate/i, avail:'Company document — obtain from bank', esds:false },
+    { key:'Net worth certificate (CA certified)', re:/net\s*worth certificate/i, avail:'Company document — obtain from Finance/CA', esds:false },
+    { key:'Undertaking / self-declaration (format as prescribed)', re:/self[- ]declaration|undertaking (letter|format)/i, avail:'Template available — fill and sign as per prescribed format', esds:false },
+    { key:'Covering letter / letter of submission', re:/covering letter|letter of submission/i, avail:'Template available', esds:false },
+    { key:'Bid securing declaration', re:/bid securing declaration/i, avail:'Template available — sign as per prescribed format', esds:false }
+  ];
+  const documentChecklist = [];
+  const docKeysAdded = new Set();
+  docPatterns.forEach(p=>{
+    const m = text.match(p.re);
+    if(m){
+      documentChecklist.push({
+        doc: p.key, context: contextSnippet(text, m.index), avail: p.avail, templateId: p.esds || null,
+        matchIndex: m.index, matchLen: m[0].length
+      });
+      docKeysAdded.add(p.key.toLowerCase());
+    }
+  });
+
+  // Map every detected PQ/TQ requirement to the actual document that proves it — even if the RFP's
+  // exact wording for that document (e.g. "self-certification") wasn't literally present in the text,
+  // so the checklist reflects everything the bid genuinely needs to submit, not just what the regexes
+  // above happened to spot verbatim.
+  const REQUIREMENT_DOC_MAP = {
+    turnover: { key:'Annual turnover certificate (CA/CS certified)', avail:'Template available', esds:'turnover' },
+    manpower: { key:'Manpower / FTE undertaking', avail:'Template available', esds:'manpower' },
+    compute: { key:'Compute & storage self-certification', avail:'Template available', esds:'compute_storage' },
+    storage: { key:'Compute & storage self-certification', avail:'Template available', esds:'compute_storage' },
+    gpu: { key:'GPU nodes self-certification', avail:'Template available', esds:'gpu_nodes' },
+    aistorage: { key:'AI storage self-certification', avail:'Template available', esds:'ai_storage' },
+    network: { key:'Network backbone self-certification', avail:'Template available', esds:'network_backbone' },
+    rpo: { key:'DR compliance statement (RPO/RTO commitment)', avail:'Template available — issue as a signed DR compliance letter', esds:false },
+    rto: { key:'DR compliance statement (RPO/RTO commitment)', avail:'Template available — issue as a signed DR compliance letter', esds:false },
+    uptime: { key:'SLA commitment / undertaking letter', avail:'Company document — Delivery/SLA desk to issue', esds:false },
+    tier: { key:'Data centre Tier certification (TIA-942)', avail:'Available — attach current TIA-942 certificate', esds:false },
+    experience: { key:'Work order / client reference letters', avail:'Pull from delivery/PMO — use reference projects in Capability Library', esds:false },
+    breach: { key:'Security incident response / SOC commitment letter', avail:'Company document — Security/Compliance to issue', esds:false }
+  };
+  requirements.forEach(r=>{
+    const mapping = REQUIREMENT_DOC_MAP[r.id];
+    if(!mapping) return;
+    if(docKeysAdded.has(mapping.key.toLowerCase())) return;
+    docKeysAdded.add(mapping.key.toLowerCase());
+    documentChecklist.push({
+      doc: mapping.key,
+      context: 'Implied by the "' + r.label + '" requirement detected in this RFP (ask: ' + r.ask + ') — exact document phrasing not found verbatim in the text.',
+      avail: mapping.avail, templateId: mapping.esds || null,
+      matchIndex: r.matchIndex!=null ? r.matchIndex : null, matchLen: r.matchLen || 20
+    });
+  });
+
+  // Broad generic sweep for any other named Annexure/Appendix/Schedule/Form/Proforma the fixed
+  // patterns above didn't catch by name, so "all PQ & TQ forms" are represented even when the RFP
+  // uses non-standard phrasing.
+  (function scanGenericAnnexures(){
+    const patterns = [
+      { re:/annexure[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Annexure '+m[1].toUpperCase() },
+      { re:/appendix[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Appendix '+m[1].toUpperCase() },
+      { re:/schedule[\s\-:]*([ivxlcdm]+|[a-z]|\d+)\b[^.\n]{0,60}/gi, label:(m)=>'Schedule '+m[1].toUpperCase() },
+      { re:/form[\s\-]*no\.?[\s\-:]*([a-z0-9]+)[^.\n]{0,60}/gi, label:(m)=>'Form No. '+m[1].toUpperCase() },
+      { re:/proforma[\s\-:]*([ivxlcdm]+|[a-z]|\d+)?[^.\n]{0,60}/gi, label:(m)=>'Proforma'+(m[1]?(' '+m[1].toUpperCase()):'') }
+    ];
+    let count = 0;
+    patterns.forEach(p=>{
+      let m;
+      p.re.lastIndex = 0;
+      while((m = p.re.exec(text)) && count<40){
+        const label = p.label(m);
+        const dedupeKey = label.toLowerCase();
+        if(docKeysAdded.has(dedupeKey)) continue;
+        docKeysAdded.add(dedupeKey);
+        documentChecklist.push({
+          doc: label, context: contextSnippet(text, m.index), avail: 'Prepare in the exact prescribed format given in the RFP', templateId: null,
+          matchIndex: m.index, matchLen: m[0].length
+        });
+        count++;
+      }
+    });
+  })();
+
+  // marking scheme -> scorecard
+  const marking = detectMarkingScheme(text);
+  const scorecard = marking.criteria.map(c=>{
+    const kbField = guessKbFieldForUnit(c.unit);
+    const esdsValue = kbField ? kbFieldValue(kb, kbField) : '';
+    return {
+      label: c.label, unit: c.unit, baseValue: c.baseValue, baseMarks: c.baseMarks,
+      incValue: c.incValue, incMarks: c.incMarks, maxMarks: c.maxMarks, categoryLabel: c.categoryLabel,
+      esdsValue: (esdsValue!=null && esdsValue!=='') ? esdsValue : '', kbField
+    };
+  });
+
+  const suggestedProjects = suggestReferenceProjects(text, kb);
+
+  // counts
+  const counts = {met:0, partial:0, gap:0, info:0};
+  requirements.forEach(r=>{ counts[r.status] = (counts[r.status]||0)+1; });
+  const scoreBase = counts.met + counts.partial + counts.gap;
+  const fitScore = scoreBase>0 ? Math.round(((counts.met + counts.partial*0.5) / scoreBase)*100) : 0;
+
+  // risks narrative
+  const risks = [];
+  requirements.filter(r=>r.status==='gap').forEach(r=>{
+    risks.push({level:'high', title: r.label+' — gap against current capability data', text: `RFP asks: ${r.ask}. ESDS position: ${r.esds}. ${r.note}`});
+  });
+  requirements.filter(r=>r.status==='partial').forEach(r=>{
+    risks.push({level:'med', title: r.label+' — needs confirmation', text: `RFP asks: ${r.ask}. ESDS position: ${r.esds}. ${r.note}`});
+  });
+  risks.push({level:'info', title:'Scope boundary', text:'Confirm which layer this RFP expects ESDS to own end-to-end (infrastructure/cloud/security/DR/ops) versus what is delivered by application, ICCC, GIS or OEM partners — this changes both the commercial and the document list.'});
+  risks.push({level:'info', title:'Dates & weightage', text:'Submission date, EMD amount and technical/financial evaluation weightage should always be re-confirmed against the source PDF — automatic extraction of these fields is best-effort only.'});
+  if(!meta.submissionDate) risks.push({level:'med', title:'Submission date not detected', text:'Could not confidently detect a bid submission / EOI closing date — check the document manually and add it to your tracker.'});
+
+  return { meta, requirements, documentChecklist, counts, fitScore, risks, textLength:text.length, scorecard, markingCategories:marking.categories, suggestedProjects };
+}
+
+/* ================= RENDER RESULTS ================= */
+function statusPillHtml(status){
+  const map = {met:['status-met','Meets'], partial:['status-partial','Partial'], gap:['status-gap','Gap'], info:['status-info','Info'], na:['status-na','—']};
+  const [cls,label] = map[status] || map.na;
+  return `<span class="status-pill ${cls}">${label}</span>`;
+}
+
+function runAnalysis(text, sourceName, annexures){
+  if(!text || text.trim().length < 30){ alert('Could not extract enough text from this document. Try pasting the text directly.'); return; }
+  const result = analyzeRFP(text, KB);
+  result.sourceName = sourceName;
+  result.analysedAt = new Date().toISOString();
+  result.rfpTextSample = text.slice(0, 20000);
+  result.fullText = text.slice(0, 400000);
+  result.annexures = (annexures || []).map(a=>({...a, reviewerNote:''}));
+  result.requirements = result.requirements.map(r=>({...r, reviewerNote:''}));
+  result.documentChecklist = result.documentChecklist.map(d=>({...d, reviewerNote:''}));
+  result.status = 'Bidding';
+  currentAnalysis = result;
+  renderResults(result);
+
+  const hist = loadHistory();
+  const historyCopy = {...result};
+  delete historyCopy.fullText; // keep localStorage lean — full text reader only lives for the current session
+  hist.unshift(historyCopy);
+  saveHistory(hist);
+  refreshHistoryUI();
+
+  go('results');
+}
+
+function persistCurrentAnalysisEdits(){
+  if(!currentAnalysis) return;
+  const hist = loadHistory();
+  const idx = hist.findIndex(h=>h.analysedAt===currentAnalysis.analysedAt);
+  if(idx>-1){ const copy = {...currentAnalysis}; delete copy.fullText; hist[idx]=copy; saveHistory(hist); refreshHistoryUI(); }
+}
+function updateNote(collection, i, val){
+  currentAnalysis[collection][i].reviewerNote = val;
+  persistCurrentAnalysisEdits();
+}
+
+function renderResults(r){
+  document.getElementById('resultsEmpty').style.display='none';
+  document.getElementById('resultsBody').style.display='block';
+  document.getElementById('navResultsBadge').textContent = '1';
+
+  document.getElementById('resultTenderName').textContent = r.meta.tenderNo ? `RFP ${r.meta.tenderNo}` : (r.sourceName || 'RFP Analysis Report');
+  document.getElementById('resultTenderMeta').textContent = r.sourceName + ' · analysed ' + new Date(r.analysedAt).toLocaleString('en-IN');
+  document.getElementById('statusSelect').value = r.status || 'Bidding';
+
+  // fit ring
+  const circumference = 2*Math.PI*46;
+  const offset = circumference - (r.fitScore/100)*circumference;
+  document.getElementById('fitCircle').setAttribute('stroke-dasharray', circumference);
+  document.getElementById('fitCircle').setAttribute('stroke-dashoffset', offset);
+  const color = r.fitScore>=75 ? '#16A34A' : (r.fitScore>=45 ? '#D97706':'#DC2626');
+  document.getElementById('fitCircle').setAttribute('stroke', color);
+  document.getElementById('fitScoreNum').textContent = r.fitScore+'%';
+  document.getElementById('fitScoreNum').style.color = color;
+
+  document.getElementById('cMet').textContent = r.counts.met||0;
+  document.getElementById('cPartial').textContent = r.counts.partial||0;
+  document.getElementById('cGap').textContent = r.counts.gap||0;
+
+  // meta table
+  const metaRows = [
+    ['Source document', r.sourceName],
+    ['Tender / EOI number', r.meta.tenderNo || 'Not detected — verify manually'],
+    ['Issuing authority (best guess)', r.meta.authority || 'Not detected — verify manually'],
+    ['Submission / closing date (best guess)', r.meta.submissionDate || 'Not detected — verify manually'],
+    ['EMD (best guess)', r.meta.emd || 'Not detected — verify manually'],
+    ['Extracted text length', r.textLength.toLocaleString()+' characters']
+  ];
+  document.getElementById('metaTable').querySelector('tbody').innerHTML = metaRows.map(([k,v])=>`<tr><td style="font-weight:600;width:45%;">${k}</td><td>${v}</td></tr>`).join('');
+
+  renderDeadlineBanner(r);
+  renderAnnexTab(r);
+  renderScoreTab(r);
+  renderSourceTab(r);
+  renderRefProjectsTab(r);
+
+  // requirements table
+  const reqBody = document.getElementById('reqTableBody');
+  if(r.requirements.length===0){
+    reqBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-mute);padding:30px;">No structured requirements were confidently detected in this document. Try the AI deep-dive tab, or review the source manually.</td></tr>`;
+  } else {
+    reqBody.innerHTML = r.requirements.map((req,i)=>`
+      <tr>
+        <td><span class="tag">${req.category}</span></td>
+        <td style="font-weight:600;">${req.matchIndex!=null ? `<a href="#" onclick="jumpToSource(${req.matchIndex},${req.matchLen||20});return false;" style="color:inherit;">${req.label} 🔗</a>` : req.label}</td>
+        <td>${req.ask}</td>
+        <td>${req.esds}<div class="small-muted" style="margin-top:4px;">${req.note}</div></td>
+        <td>${statusPillHtml(req.status)}</td>
+        <td><input type="text" value="${(req.reviewerNote||'').replace(/"/g,'&quot;')}" placeholder="Add a note…" oninput="updateNote('requirements',${i},this.value)"></td>
+      </tr>`).join('');
+  }
+
+  // document checklist
+  const docBody = document.getElementById('docsTableBody');
+  if(r.documentChecklist.length===0){
+    docBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-mute);padding:30px;">No specific document requirements were detected — check the eligibility / submission-checklist section manually.</td></tr>`;
+  } else {
+    docBody.innerHTML = r.documentChecklist.map((d,i)=>`
+      <tr>
+        <td style="font-weight:600;">${d.matchIndex!=null ? `<a href="#" onclick="jumpToSource(${d.matchIndex},${d.matchLen||20});return false;" style="color:inherit;">${d.doc} 🔗</a>` : d.doc}</td>
+        <td class="small-muted">"…${d.context}…"</td>
+        <td>${d.templateId ? '<span class="status-pill status-met">Template ready</span>' : d.avail}</td>
+        <td>${d.templateId ? `<button class="pill-btn secondary" onclick="openAnnexureFromResults('${d.templateId}')">Generate →</button>` : ''}</td>
+        <td><input type="text" value="${(d.reviewerNote||'').replace(/"/g,'&quot;')}" placeholder="Add a note…" oninput="updateNote('documentChecklist',${i},this.value)"></td>
+      </tr>`).join('');
+  }
+
+  // risks
+  document.getElementById('risksBody').innerHTML = r.risks.map(risk=>`
+    <div class="risk-item ${risk.level}">
+      <div class="risk-dot"></div>
+      <div><div class="rtitle">${risk.title}</div><div class="rtext">${risk.text}</div></div>
+    </div>`).join('');
+
+  // reset AI panel
+  document.getElementById('aiOutputWrap').style.display='none';
+  document.getElementById('aiStatus').textContent='';
+}
+
+/* ---- Submission-deadline countdown (feature: countdown + .ics) ---- */
+function renderDeadlineBanner(r){
+  const banner = document.getElementById('deadlineBanner');
+  const headline = document.getElementById('deadlineHeadline');
+  const dateInput = document.getElementById('manualDeadlineInput');
+  const parsed = r.manualDeadline ? new Date(r.manualDeadline) : r.meta.submissionDateParsed;
+  banner.style.display = 'block';
+  if(parsed && !isNaN(parsed.getTime())){
+    const days = daysUntil(parsed);
+    const dateStr = parsed.toLocaleDateString('en-IN', {weekday:'short', day:'2-digit', month:'long', year:'numeric'});
+    let color = 'var(--blue)';
+    if(days<0){ headline.textContent = `Passed — was due ${dateStr}`; color='var(--text-mute)'; }
+    else if(days<=3){ headline.textContent = `${days} day${days===1?'':'s'} left — due ${dateStr}`; color='var(--red)'; }
+    else if(days<=10){ headline.textContent = `${days} days left — due ${dateStr}`; color='var(--amber)'; }
+    else { headline.textContent = `${days} days left — due ${dateStr}`; color='var(--green)'; }
+    headline.style.color = color;
+    dateInput.value = parsed.toISOString().slice(0,10);
+  } else {
+    headline.textContent = 'Not detected — set it manually →';
+    headline.style.color = 'var(--text-mute)';
+    dateInput.value = '';
+  }
+}
+document.getElementById('manualDeadlineInput').addEventListener('change', function(){
+  if(!currentAnalysis) return;
+  currentAnalysis.manualDeadline = this.value ? new Date(this.value+'T15:00:00').toISOString() : null;
+  persistCurrentAnalysisEdits();
+  renderDeadlineBanner(currentAnalysis);
+});
+document.getElementById('btnAddToCalendar').addEventListener('click', ()=>{
+  if(!currentAnalysis) return;
+  const parsed = currentAnalysis.manualDeadline ? new Date(currentAnalysis.manualDeadline) : currentAnalysis.meta.submissionDateParsed;
+  if(!parsed){ alert('Set a deadline date first (the date field next to this button).'); return; }
+  downloadICS(parsed, 'RFP submission deadline — '+(currentAnalysis.meta.tenderNo||currentAnalysis.sourceName));
+});
+document.getElementById('statusSelect').addEventListener('change', function(){
+  if(!currentAnalysis) return;
+  currentAnalysis.status = this.value;
+  persistCurrentAnalysisEdits();
+});
+
+/* ---- Scorecard tab (feature: score against the RFP's own marking scheme) ---- */
+function renderScoreTab(r){
+  const note = document.getElementById('scoreNote');
+  const body = document.getElementById('scoreTableBody');
+  const rows = r.scorecard || [];
+  if(rows.length===0){
+    note.innerHTML = `No marking-scheme table was confidently auto-detected in this document (the pattern Drishti looks for is things like "&gt;100 Crore – 70% marks, every additional 10 Crore – 10% marks"). Add rows by hand below if you know the scoring criteria — the total updates live.`;
+  } else {
+    note.innerHTML = `Auto-detected ${rows.length} scoring criterion/criteria from the document text. <b>Verify every row against the RFP</b> before relying on the total — this is pattern-matching, not a legal reading of the evaluation clause.`;
+  }
+  renderScoreRows(r);
+}
+function renderScoreRows(r){
+  const body = document.getElementById('scoreTableBody');
+  const rows = r.scorecard || [];
+  body.innerHTML = rows.map((row,i)=>`
+    <tr>
+      <td><input type="text" value="${escapeHtml(row.label)}" oninput="updateScoreField(${i},'label',this.value)" style="min-width:160px;"></td>
+      <td style="white-space:nowrap;">
+        <input type="number" step="0.01" value="${row.baseValue}" style="width:70px;display:inline-block;" oninput="updateScoreField(${i},'baseValue',this.value)">
+        <span class="small-muted">${escapeHtml(row.unit||'')} →</span>
+        <input type="number" step="0.01" value="${row.baseMarks}" style="width:60px;display:inline-block;" oninput="updateScoreField(${i},'baseMarks',this.value)">
+      </td>
+      <td style="white-space:nowrap;">
+        +<input type="number" step="0.01" value="${row.incMarks!=null?row.incMarks:''}" placeholder="marks" style="width:55px;display:inline-block;" oninput="updateScoreField(${i},'incMarks',this.value)">
+        per +<input type="number" step="0.01" value="${row.incValue!=null?row.incValue:''}" placeholder="unit" style="width:55px;display:inline-block;" oninput="updateScoreField(${i},'incValue',this.value)">
+      </td>
+      <td><input type="number" step="0.01" value="${row.maxMarks!=null?row.maxMarks:''}" placeholder="none" style="width:70px;" oninput="updateScoreField(${i},'maxMarks',this.value)"></td>
+      <td><input type="number" step="0.01" value="${row.esdsValue}" style="width:80px;" oninput="updateScoreField(${i},'esdsValue',this.value)"></td>
+      <td style="font-weight:800; color:var(--blue);">${computeCriterionMarks(row)}</td>
+      <td><button class="icon-btn" onclick="removeScoreRow(${i})">✕</button></td>
+    </tr>`).join('');
+  const total = rows.reduce((sum,row)=>sum+computeCriterionMarks(row),0);
+  document.getElementById('scoreTotalNum').textContent = (Math.round(total*100)/100).toString();
+}
+function updateScoreField(i, field, val){
+  const row = currentAnalysis.scorecard[i];
+  row[field] = (field==='label') ? val : (val===''?'':parseFloat(val));
+  persistCurrentAnalysisEdits();
+  renderScoreRows(currentAnalysis);
+}
+function removeScoreRow(i){
+  currentAnalysis.scorecard.splice(i,1);
+  persistCurrentAnalysisEdits();
+  renderScoreRows(currentAnalysis);
+}
+document.getElementById('btnAddScoreRow').addEventListener('click', ()=>{
+  if(!currentAnalysis) return;
+  currentAnalysis.scorecard = currentAnalysis.scorecard || [];
+  currentAnalysis.scorecard.push({label:'New criterion', unit:'', baseValue:0, baseMarks:0, incValue:null, incMarks:null, maxMarks:'', esdsValue:0});
+  persistCurrentAnalysisEdits();
+  renderScoreRows(currentAnalysis);
+});
+
+/* ---- Source & highlights tab (feature: in-context RFP reader) ---- */
+function renderSourceTab(r){
+  const note = document.getElementById('sourceNote');
+  const reader = document.getElementById('sourceReader');
+  if(!r.fullText){
+    note.innerHTML = `Full source text isn't retained for saved/reopened analyses (to keep local storage small) — re-run the analysis on the file to use the highlighted reader.`;
+    reader.textContent = r.rfpTextSample ? r.rfpTextSample.slice(0,5000)+'\n\n…(sample only)' : 'No source text available.';
+    return;
+  }
+  note.innerHTML = `Showing the first ${Math.min(r.fullText.length,400000).toLocaleString()} characters extracted from the source file${r.fullText.length>=400000?' (truncated)':''}.`;
+  const spans = [];
+  (r.requirements||[]).forEach(req=>{ if(req.matchIndex!=null) spans.push({start:req.matchIndex, end:req.matchIndex+(req.matchLen||10), cls:'status-'+req.status}); });
+  (r.documentChecklist||[]).forEach(d=>{ if(d.matchIndex!=null) spans.push({start:d.matchIndex, end:d.matchIndex+(d.matchLen||10), cls:'status-info'}); });
+  spans.sort((a,b)=>a.start-b.start);
+  let html=''; let cursor=0;
+  spans.forEach((s,i)=>{
+    if(s.start<cursor) return; // skip overlaps
+    html += escapeHtml(r.fullText.substring(cursor, s.start));
+    html += `<mark id="src-${s.start}" class="${s.cls}" style="padding:1px 3px; border-radius:3px;">` + escapeHtml(r.fullText.substring(s.start, s.end)) + `</mark>`;
+    cursor = s.end;
+  });
+  html += escapeHtml(r.fullText.substring(cursor));
+  reader.innerHTML = html;
+}
+function jumpToSource(index, len){
+  const group = document.querySelector('.tabs .tab[data-tab="source"]').parentElement;
+  group.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tabs .tab[data-tab="source"]').classList.add('active');
+  document.querySelectorAll('.tabpanel').forEach(p=>{ if(p.id.startsWith('tab-')) p.classList.remove('active'); });
+  document.getElementById('tab-source').classList.add('active');
+  setTimeout(()=>{
+    const el = document.getElementById('src-'+index);
+    if(el){ el.scrollIntoView({block:'center'}); el.style.outline='3px solid var(--blue)'; setTimeout(()=>el.style.outline='',1500); }
+  }, 50);
+}
+
+/* ---- Suggested reference projects (feature: closest-match citation helper) ---- */
+function renderRefProjectsTab(r){
+  const body = document.getElementById('refProjectsBody');
+  const list = r.suggestedProjects || [];
+  if(list.length===0){
+    body.innerHTML = `<div class="empty-state" style="padding:20px;">No strong keyword overlap found with your saved reference projects — add more in Capability Library → Reference Projects, or cite manually.</div>`;
+    return;
+  }
+  body.innerHTML = list.map(p=>`
+    <div class="risk-item info">
+      <div class="risk-dot"></div>
+      <div><div class="rtitle">${escapeHtml(p.name)} <span class="small-muted">(relevance score ${p.score})</span></div>
+      <div class="rtext"><b>${escapeHtml(p.client)}</b> — ${escapeHtml(p.scope)}</div></div>
+    </div>`).join('');
+}
+
+function renderAnnexTab(r){
+  const wrap = document.getElementById('annexFoundBody');
+  const note = document.getElementById('annexFoundNote');
+  const bulkBtn = document.getElementById('btnDownloadAllAnnexures');
+  const list = r.annexures || [];
+
+  if(list.length===0){
+    note.style.display='block';
+    note.innerHTML = `<b>No annexure/BOQ headings were confidently detected</b> in this document. That usually means either the RFP keeps its formats in a separate corrigendum/BoQ file (upload that one too), the headings use unusual wording, or the file is a scanned/image PDF with no selectable text. You can still use "AI deep-dive" or paste a specific section manually.`;
+    wrap.innerHTML = `<div class="empty-state"><div class="icon">▥</div>Nothing detected yet.</div>`;
+    bulkBtn.style.display='none';
+    return;
+  }
+
+  note.style.display='block';
+  note.innerHTML = `Found <b>${list.length}</b> annexure/schedule/BOQ section(s). Downloads are extracted as-is from the source file — ${list.some(a=>a.kind==='html') ? 'tables are preserved for Word-sourced sections; ' : ''}double-check formatting/complex tables against the original before circulating.`;
+  bulkBtn.style.display = list.length>1 ? 'inline-flex' : 'none';
+
+  wrap.innerHTML = list.map((a,i)=>`
+    <div class="lib-row" style="align-items:flex-start; flex-direction:column; gap:8px; padding:14px 0;">
+      <div style="display:flex; width:100%; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:700;">${escapeHtml(a.label)}</div>
+          <div class="small-muted">${a.sourceFile ? 'From <b>'+escapeHtml(a.sourceFile)+'</b> · ' : ''}${a.page ? 'found near page '+a.page+' · ' : ''}${a.length.toLocaleString()} characters extracted</div>
+        </div>
+        <div style="display:flex; gap:8px; flex:0 0 auto;">
+          <button class="pill-btn secondary" onclick="togglePreviewAnnex(${i})">Preview</button>
+          <button class="pill-btn" onclick="downloadDetectedAnnexure(${i})">⇩ Download (.doc)</button>
+        </div>
+      </div>
+      <input type="text" value="${(a.reviewerNote||'').replace(/"/g,'&quot;')}" placeholder="Add a note (e.g. 'assigned to Pooja')…" style="width:100%;" oninput="updateNote('annexures',${i},this.value)">
+      <div id="annexPreview${i}" style="display:none; width:100%; background:#FAFBFC; border:1px solid var(--border); border-radius:8px; padding:14px; max-height:260px; overflow:auto; white-space:pre-wrap; font-size:12.5px; font-family:Consolas,monospace;">${escapeHtml(a.content.slice(0,3000))}${a.content.length>3000?'\n\n…(truncated in preview — full text is included in the download)':''}</div>
+    </div>`).join('');
+}
+
+function togglePreviewAnnex(i){
+  const el = document.getElementById('annexPreview'+i);
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+/* ---- Auto-fill known blanks (feature: fill company/signatory details before download) ---- */
+function autoFillBlanks(text, kb){
+  const fills = [
+    [/(\bCompany\s*Name\b|\bName of (?:the )?(?:Bidder|Firm|Company)\b)\s*[:\-]?\s*_{3,}/gi, kb.company.name],
+    [/(\bRegistered\s*(?:Office\s*)?Address\b)\s*[:\-]?\s*_{3,}/gi, kb.company.hq],
+    [/(\bCIN\b)\s*[:\-]?\s*_{3,}/gi, kb.company.cin||''],
+    [/(\bPAN\b(?:\s*(?:No\.?|Number))?)\s*[:\-]?\s*_{3,}/gi, kb.company.pan||''],
+    [/(\bGSTIN\b|\bGST\s*(?:No\.?|Number)?)\s*[:\-]?\s*_{3,}/gi, kb.company.gst||''],
+    [/(\bAuthoris(?:ed|zed)\s*Signatory\b(?:\s*Name)?)\s*[:\-]?\s*_{3,}/gi, kb.signatory.name],
+    [/(\bDesignation\b)\s*[:\-]?\s*_{3,}/gi, kb.signatory.designation],
+    [/(\bMobile\b(?:\s*(?:No\.?|Number))?)\s*[:\-]?\s*_{3,}/gi, kb.signatory.mobile],
+    [/(\bE-?mail\b(?:\s*(?:ID|Address))?)\s*[:\-]?\s*_{3,}/gi, kb.signatory.email],
+    [/(\bDate\b)\s*[:\-]?\s*_{3,}/gi, todayStr()]
+  ];
+  let out = text;
+  fills.forEach(([re,val])=>{ if(val) out = out.replace(re, (m,label)=> label+': '+val); });
+  return out;
+}
+
+function annexureToExportHtml(a){
+  const autoFillOn = document.getElementById('autoFillToggle')?.checked;
+  if(a.kind==='html'){
+    const html = autoFillOn ? autoFillBlanks(a.htmlContent, KB) : a.htmlContent;
+    return `<h3 style="font-family:Calibri,Arial,sans-serif;">${escapeHtml(a.label)}</h3>` + html
+      + (autoFillOn ? `<p style="font-size:9pt;color:#888;">(Recognised company/signatory fields auto-filled by SWARAJ Drishti — please verify before signing.)</p>` : '');
+  }
+  const content = autoFillOn ? autoFillBlanks(a.content, KB) : a.content;
+  return `<h3 style="font-family:Calibri,Arial,sans-serif;">${escapeHtml(a.label)}</h3>
+    <pre style="white-space:pre-wrap; font-family:Consolas,'Courier New',monospace; font-size:10.5pt; line-height:1.4;">${escapeHtml(content)}</pre>
+    ${autoFillOn ? `<p style="font-size:9pt;color:#888;">(Recognised company/signatory fields auto-filled by SWARAJ Drishti — please verify before signing.)</p>` : ''}`;
+}
+
+function downloadDetectedAnnexure(i){
+  const a = currentAnalysis.annexures[i];
+  downloadWordDoc(a.label, annexureToExportHtml(a));
+}
+
+function downloadAllDetectedAnnexures(){
+  const list = currentAnalysis.annexures || [];
+  const html = list.map(a=>annexureToExportHtml(a) + '<br clear="all" style="page-break-before:always">').join('\n');
+  downloadWordDoc((currentAnalysis.meta.tenderNo || currentAnalysis.sourceName || 'RFP')+'-Annexures', html);
+}
+document.getElementById('btnDownloadAllAnnexures').addEventListener('click', downloadAllDetectedAnnexures);
+
+/* ---- First-draft technical proposal (feature 2) ---- */
+document.getElementById('btnGenerateProposal').addEventListener('click', ()=>{
+  if(!currentAnalysis) return;
+  const r = currentAnalysis, kb = KB;
+  const tenderLabel = r.meta.tenderNo || r.sourceName;
+  const html = `
+  <h1 style="font-family:Calibri,Arial,sans-serif;">Technical Proposal — ${escapeHtml(tenderLabel)}</h1>
+  <p><i>Draft generated by SWARAJ Drishti on ${todayStr()}. Review and expand every section before submission.</i></p>
+
+  <h2>1. ${escapeHtml(kb.company.name)} — Corporate Profile</h2>
+  <p>${escapeHtml(kb.company.name)} has operated since ${kb.company.founded} with a footprint across ${escapeHtml(kb.company.footprint)}. ${escapeHtml(kb.company.clients)}</p>
+  <p><b>Certifications held:</b> ${kb.certifications.map(escapeHtml).join('; ')}.</p>
+  <p><b>Data centres:</b> ${kb.dataCentres.map(d=>escapeHtml(d.location)+' ('+escapeHtml(d.tier)+')').join('; ')}.</p>
+  <p><b>Average turnover (last 3 audited FYs):</b> ₹${avgTurnover(kb).toFixed(2)} Crore. <b>Qualifying manpower:</b> ${kb.manpower.fte}+ FTEs.</p>
+
+  <h2>2. Understanding of the Requirement</h2>
+  <p>Tender/EOI: ${escapeHtml(r.meta.tenderNo||'—')}. Issuing authority: ${escapeHtml(r.meta.authority||'—')}. Submission date: ${escapeHtml(r.meta.submissionDate||'—')}.</p>
+  <p>[Expand with the specific objective, scope boundary and scale figures stated in the RFP.]</p>
+
+  <h2>3. Capability-to-Requirement Mapping</h2>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr><th>Category</th><th>Requirement</th><th>RFP asks</th><th>ESDS position</th><th>Status</th></tr>
+    ${r.requirements.map(req=>`<tr><td>${escapeHtml(req.category)}</td><td>${escapeHtml(req.label)}</td><td>${escapeHtml(req.ask)}</td><td>${escapeHtml(req.esds)}</td><td>${req.status.toUpperCase()}</td></tr>`).join('')}
+  </table>
+
+  <h2>4. Projected Technical Score</h2>
+  ${ (r.scorecard&&r.scorecard.length) ? `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr><th>Criterion</th><th>ESDS value</th><th>Estimated marks</th></tr>
+    ${r.scorecard.map(row=>`<tr><td>${escapeHtml(row.label)}</td><td>${row.esdsValue}</td><td>${computeCriterionMarks(row)}</td></tr>`).join('')}
+    <tr><td colspan="2"><b>Total</b></td><td><b>${r.scorecard.reduce((s,row)=>s+computeCriterionMarks(row),0)}</b></td></tr>
+  </table>` : '<p>[No marking scheme auto-detected — insert manually.]</p>' }
+
+  <h2>5. Reference Projects</h2>
+  <ul>${(r.suggestedProjects&&r.suggestedProjects.length ? r.suggestedProjects : kb.referenceProjects.slice(0,3)).map(p=>`<li><b>${escapeHtml(p.name)}</b> (${escapeHtml(p.client)}) — ${escapeHtml(p.scope)}</li>`).join('')}</ul>
+
+  <h2>6. Annexures Supplied</h2>
+  <ul>${(r.annexures||[]).map(a=>`<li>${escapeHtml(a.label)} — extracted from the RFP, filled and attached separately.</li>`).join('') || '<li>[List annexures once finalised.]</li>'}</ul>
+
+  <h2>7. Risks &amp; Open Questions</h2>
+  <ul>${r.risks.map(risk=>`<li><b>${escapeHtml(risk.title)}:</b> ${escapeHtml(risk.text)}</li>`).join('')}</ul>
+
+  <h2>8. Why ${escapeHtml(kb.company.name)}</h2>
+  <p>${kb.products.map(p=>`<b>${escapeHtml(p.name)}</b> — ${escapeHtml(p.desc)}`).join('<br>')}</p>
+  `;
+  downloadWordDoc((tenderLabel||'RFP')+'-Draft-Technical-Proposal', html);
+});
+
+/* ---- Shareable analysis export/import (feature 10) ---- */
+document.getElementById('btnExportAnalysisJson').addEventListener('click', ()=>{
+  if(!currentAnalysis) return;
+  const blob = new Blob([JSON.stringify(currentAnalysis,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (currentAnalysis.meta.tenderNo||currentAnalysis.sourceName||'analysis').replace(/[^a-z0-9\-]+/gi,'_')+'-drishti-analysis.json';
+  a.click(); URL.revokeObjectURL(url);
+});
+document.getElementById('btnImportAnalysis').addEventListener('click', ()=>document.getElementById('importAnalysisInput').click());
+document.getElementById('importAnalysisInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const text = await readFileAsText(file);
+    const parsed = JSON.parse(text);
+    if(!parsed.requirements || !parsed.meta){ alert('This file does not look like a SWARAJ Drishti analysis export.'); return; }
+    currentAnalysis = parsed;
+    renderResults(parsed);
+    const hist = loadHistory();
+    const copy = {...parsed}; delete copy.fullText;
+    if(!hist.find(h=>h.analysedAt===copy.analysedAt)) hist.unshift(copy);
+    saveHistory(hist);
+    refreshHistoryUI();
+    go('results');
+  }catch(err){ alert('Could not read that file as a valid Drishti analysis export.'); }
+});
+
+function openAnnexureFromResults(id){
+  go('annexures');
+  selectAnnexure(id);
+}
+
+document.getElementById('btnDeleteAnalysis').addEventListener('click', ()=>{
+  currentAnalysis = null;
+  document.getElementById('resultsEmpty').style.display='block';
+  document.getElementById('resultsBody').style.display='none';
+  document.getElementById('navResultsBadge').textContent = '—';
+  go('upload');
+});
+
+document.getElementById('btnExportReport').addEventListener('click', ()=>{
+  if(!currentAnalysis) return;
+  const r = currentAnalysis;
+  let html = `<h2>RFP Fit Report — ${r.sourceName}</h2>
+  <p><i>Generated by SWARAJ Drishti on ${new Date(r.analysedAt).toLocaleString('en-IN')}</i></p>
+  <p><b>Overall fit score:</b> ${r.fitScore}% &nbsp; (Meets: ${r.counts.met||0}, Partial: ${r.counts.partial||0}, Gap: ${r.counts.gap||0})</p>
+  <h3>Detected tender details</h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr><td><b>Tender / EOI number</b></td><td>${r.meta.tenderNo||'—'}</td></tr>
+    <tr><td><b>Issuing authority</b></td><td>${r.meta.authority||'—'}</td></tr>
+    <tr><td><b>Submission date</b></td><td>${r.meta.submissionDate||'—'}</td></tr>
+    <tr><td><b>EMD</b></td><td>${r.meta.emd||'—'}</td></tr>
+  </table>
+  <h3>Requirement-by-requirement</h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr><th>Category</th><th>Requirement</th><th>RFP asks</th><th>ESDS position</th><th>Status</th></tr>
+    ${r.requirements.map(req=>`<tr><td>${req.category}</td><td>${req.label}</td><td>${req.ask}</td><td>${req.esds} — ${req.note}</td><td>${req.status.toUpperCase()}</td></tr>`).join('')}
+  </table>
+  <h3>Supporting documents</h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr><th>Document</th><th>ESDS can supply</th></tr>
+    ${r.documentChecklist.map(d=>`<tr><td>${d.doc}</td><td>${d.templateId?'Template ready in Drishti':d.avail}</td></tr>`).join('')}
+  </table>
+  <h3>Challenges &amp; open questions</h3>
+  <ul>${r.risks.map(risk=>`<li><b>${risk.title}:</b> ${risk.text}</li>`).join('')}</ul>`;
+  downloadWordDoc('RFP-Fit-Report', html);
+});
+
+/* ================= AI DEEP-DIVE ================= */
+const aiKeyInput = document.getElementById('aiKeyInput');
+aiKeyInput.value = localStorage.getItem(LS_AIKEY) || '';
+aiKeyInput.addEventListener('change', ()=>localStorage.setItem(LS_AIKEY, aiKeyInput.value));
+
+document.getElementById('btnRunAI').addEventListener('click', async ()=>{
+  if(!currentAnalysis){ alert('Run a document analysis first.'); return; }
+  const key = aiKeyInput.value.trim();
+  const model = document.getElementById('aiModelInput').value.trim() || 'claude-sonnet-5';
+  if(!key){ alert('Enter an Anthropic API key first.'); return; }
+  localStorage.setItem(LS_AIKEY, key);
+  const statusEl = document.getElementById('aiStatus');
+  statusEl.textContent = 'Calling the Anthropic API from your browser…';
+
+  const prompt = `You are helping an ESDS presales engineer read a tender document. Below is (a) the ESDS capability profile and (b) an extract of the RFP text. Produce a concise, well-structured plain-text brief with these sections:
+1. WHAT THE TENDER WANTS — a short plain-English summary.
+2. CAN ESDS DO IT — go through the main eligibility, technical and SLA asks, and for each say Meets / Partial / Gap against the capability profile, with one line of reasoning.
+3. DOCUMENTS TO PREPARE — list the specific supporting documents this RFP appears to require, and note whether ESDS already has a template for it.
+4. KEY CHALLENGES — the 3-5 biggest risks or open questions before ESDS bids.
+Keep it tight and skimmable, no markdown headers with #, just clear section titles in capitals like above.
+
+ESDS CAPABILITY PROFILE (JSON):
+${JSON.stringify(KB, (k,v)=> typeof v === 'function' ? undefined : v).slice(0,6000)}
+
+RFP TEXT EXTRACT:
+${currentAnalysis.rfpTextSample}`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({ model, max_tokens: 3000, messages:[{role:'user', content: prompt}] })
+    });
+    if(!resp.ok){ const errText = await resp.text(); throw new Error('HTTP '+resp.status+': '+errText.slice(0,300)); }
+    const data = await resp.json();
+    const textOut = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n');
+    document.getElementById('aiOutput').textContent = textOut || '(No text returned.)';
+    document.getElementById('aiOutputWrap').style.display='block';
+    statusEl.textContent = 'Done.';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Could not reach the Anthropic API from the browser (' + err.message + '). Some organisations block direct-browser API calls — check the browser console for details.';
+  }
+});
+
+/* ================= WORD (.doc) EXPORT HELPER ================= */
+function downloadWordDoc(filenameBase, innerHtml){
+  const pre = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset='utf-8'><title>Export</title>
+  <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;} table{border-collapse:collapse;} td,th{padding:6px;}</style>
+  </head><body>`;
+  const post = `</body></html>`;
+  const blob = new Blob(['\ufeff', pre + innerHtml + post], { type:'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filenameBase.replace(/[^a-z0-9\-]+/gi,'_') + '.doc';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ================= ANNEXURE GENERATOR ================= */
+let activeAnnexureId = null;
+let annexureFieldValues = {};
+
+function renderAnnexureList(){
+  const wrap = document.getElementById('annexureList');
+  wrap.innerHTML = KB.annexureTemplates.map(t=>`
+    <div class="navitem" data-annexure="${t.id}" style="margin-bottom:4px;">
+      <span class="ico">▤</span> ${t.title}
+    </div>`).join('');
+  wrap.querySelectorAll('[data-annexure]').forEach(el=>{
+    el.addEventListener('click', ()=>selectAnnexure(el.dataset.annexure));
+  });
+}
+
+function selectAnnexure(id){
+  activeAnnexureId = id;
+  annexureFieldValues = {};
+  document.querySelectorAll('#annexureList [data-annexure]').forEach(el=>el.classList.toggle('active', el.dataset.annexure===id));
+  const t = KB.annexureTemplates.find(x=>x.id===id);
+  document.getElementById('annexureTitle').textContent = t.title;
+  document.getElementById('annexureSubtitle').textContent = t.subtitle;
+  document.getElementById('btnDownloadAnnexure').disabled = false;
+
+  // prefill authority/tender_subject from last analysis if present
+  if(currentAnalysis){
+    annexureFieldValues.authority = currentAnalysis.meta.authority || '';
+  }
+
+  const fieldsWrap = document.getElementById('annexureFieldsTop');
+  fieldsWrap.innerHTML = `<div class="field"><label class="field-label">Addressed to (authority)</label><input type="text" id="af_authority" value="${annexureFieldValues.authority||''}" placeholder="e.g. The Commissioner, XYZ Authority"></div>` +
+    t.fields.map(f=>`<div class="field"><label class="field-label">${f.label}</label><input type="text" id="af_${f.id}" value="${f.default||''}" placeholder="${f.placeholder||''}"></div>`).join('');
+
+  fieldsWrap.querySelectorAll('input').forEach(inp=>inp.addEventListener('input', updateAnnexurePreview));
+  updateAnnexurePreview();
+}
+
+function updateAnnexurePreview(){
+  const t = KB.annexureTemplates.find(x=>x.id===activeAnnexureId);
+  if(!t) return;
+  const f = { authority: document.getElementById('af_authority')?.value || '' };
+  t.fields.forEach(fld=>{ f[fld.id] = document.getElementById('af_'+fld.id)?.value || ''; });
+  const text = t.body(KB, f);
+  document.getElementById('annexurePreview').innerText = text;
+}
+
+document.getElementById('btnDownloadAnnexure').addEventListener('click', ()=>{
+  const t = KB.annexureTemplates.find(x=>x.id===activeAnnexureId);
+  if(!t) return;
+  const content = document.getElementById('annexurePreview').innerText;
+  const html = '<div style="white-space:pre-wrap;line-height:1.6;">' + content.replace(/\n/g,'<br>') + '</div>';
+  downloadWordDoc(t.title, html);
+});
+
+/* ================= LIBRARY EDITOR ================= */
+function refreshLibraryUI(){
+  document.getElementById('f_companyName').value = KB.company.name;
+  document.getElementById('f_founded').value = KB.company.founded;
+  document.getElementById('f_hq').value = KB.company.hq;
+  document.getElementById('f_footprint').value = KB.company.footprint;
+  document.getElementById('f_clients').value = KB.company.clients;
+  document.getElementById('f_cin').value = KB.company.cin||'';
+  document.getElementById('f_pan').value = KB.company.pan||'';
+  document.getElementById('f_gst').value = KB.company.gst||'';
+  document.getElementById('f_fte').value = KB.manpower.fte;
+  document.getElementById('f_fteNote').value = KB.manpower.note;
+
+  renderTurnoverRows();
+
+  document.getElementById('f_computeVMs').value = KB.infra.computeVMs;
+  document.getElementById('f_storagePB').value = KB.infra.storagePB;
+  document.getElementById('f_gpuNodes').value = KB.infra.gpuNodes;
+  document.getElementById('f_aiStoragePB').value = KB.infra.aiStoragePB;
+  document.getElementById('f_networkGbps').value = KB.infra.networkGbps;
+  document.getElementById('f_orchestration').value = KB.infra.orchestration;
+  document.getElementById('f_gpuFamilies').value = KB.infra.gpuFamilies;
+  document.getElementById('f_rpo').value = KB.dr.rpoMinutes;
+  document.getElementById('f_rto').value = KB.dr.rtoMinutes;
+
+  document.getElementById('f_sigName').value = KB.signatory.name;
+  document.getElementById('f_sigDesig').value = KB.signatory.designation;
+  document.getElementById('f_sigMobile').value = KB.signatory.mobile;
+  document.getElementById('f_sigEmail').value = KB.signatory.email;
+  document.getElementById('f_sigAddress').value = KB.signatory.address;
+
+  renderCertList(); renderDCList(); renderProductList(); renderSLAList(); renderRefProjectList(); renderCustomRuleList();
+
+  document.getElementById('kbTurnoverStat').textContent = '₹'+avgTurnover(KB).toFixed(1)+' Cr';
+  document.getElementById('kbCertStat').textContent = KB.certifications.length;
+  document.getElementById('kbDCStat').textContent = KB.dataCentres.length;
+  document.getElementById('kbGPUStat').textContent = KB.infra.gpuNodes;
+  document.getElementById('kbGPUFamStat').textContent = KB.infra.gpuFamilies.split(',').slice(0,2).join(',')+'…';
+}
+
+function renderTurnoverRows(){
+  const wrap = document.getElementById('turnoverRows');
+  wrap.innerHTML = KB.turnover.map((t,i)=>`
+    <div class="field-row" style="margin-bottom:8px;">
+      <input type="text" value="${t.year}" onchange="KB.turnover[${i}].year=this.value; saveKB(KB);">
+      <input type="number" step="0.01" value="${t.crore}" onchange="KB.turnover[${i}].crore=parseFloat(this.value)||0; saveKB(KB); document.getElementById('avgTurnoverPreview').textContent=avgTurnover(KB).toFixed(2);">
+    </div>`).join('');
+  document.getElementById('avgTurnoverPreview').textContent = avgTurnover(KB).toFixed(2);
+}
+
+function renderCertList(){
+  document.getElementById('certList').innerHTML = KB.certifications.map((c,i)=>`
+    <div class="lib-row"><input type="text" value="${c.replace(/"/g,'&quot;')}" onchange="KB.certifications[${i}]=this.value; saveKB(KB);">
+    <button class="icon-btn" onclick="KB.certifications.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button></div>`).join('');
+}
+function renderDCList(){
+  document.getElementById('dcList').innerHTML = KB.dataCentres.map((d,i)=>`
+    <div class="lib-row">
+      <input type="text" value="${d.location}" placeholder="Location" onchange="KB.dataCentres[${i}].location=this.value; saveKB(KB);">
+      <input type="text" value="${d.tier}" placeholder="Tier" style="max-width:90px;" onchange="KB.dataCentres[${i}].tier=this.value; saveKB(KB);">
+      <button class="icon-btn" onclick="KB.dataCentres.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button>
+    </div>`).join('');
+}
+function renderProductList(){
+  document.getElementById('productList').innerHTML = KB.products.map((p,i)=>`
+    <div class="lib-row">
+      <input type="text" value="${p.name}" style="max-width:160px;" onchange="KB.products[${i}].name=this.value; saveKB(KB);">
+      <input type="text" value="${p.desc.replace(/"/g,'&quot;')}" onchange="KB.products[${i}].desc=this.value; saveKB(KB);">
+      <button class="icon-btn" onclick="KB.products.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button>
+    </div>`).join('');
+}
+function renderSLAList(){
+  document.getElementById('slaList').innerHTML = KB.slas.map((s,i)=>`
+    <div class="lib-row">
+      <input type="text" value="${s.scope.replace(/"/g,'&quot;')}" onchange="KB.slas[${i}].scope=this.value; saveKB(KB);">
+      <input type="number" step="0.01" value="${s.pct}" style="max-width:100px;" onchange="KB.slas[${i}].pct=parseFloat(this.value)||0; saveKB(KB);">
+      <button class="icon-btn" onclick="KB.slas.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button>
+    </div>`).join('');
+}
+function renderRefProjectList(){
+  document.getElementById('refProjectList').innerHTML = (KB.referenceProjects||[]).map((p,i)=>`
+    <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;">
+      <div class="field-row">
+        <input type="text" value="${(p.name||'').replace(/"/g,'&quot;')}" placeholder="Project name" onchange="KB.referenceProjects[${i}].name=this.value; saveKB(KB);">
+        <input type="text" value="${(p.client||'').replace(/"/g,'&quot;')}" placeholder="Client" onchange="KB.referenceProjects[${i}].client=this.value; saveKB(KB);">
+      </div>
+      <textarea placeholder="Scope" style="margin-top:8px;" onchange="KB.referenceProjects[${i}].scope=this.value; saveKB(KB);">${(p.scope||'')}</textarea>
+      <input type="text" style="margin-top:8px;" value="${(p.keywords||'').replace(/"/g,'&quot;')}" placeholder="Extra keywords for matching (space separated)" onchange="KB.referenceProjects[${i}].keywords=this.value; saveKB(KB);">
+      <div style="text-align:right; margin-top:8px;"><button class="icon-btn" onclick="KB.referenceProjects.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button></div>
+    </div>`).join('') || `<div class="small-muted">No reference projects yet.</div>`;
+}
+function renderCustomRuleList(){
+  const fieldOptions = KB_FIELD_OPTIONS.map(f=>`<option value="${f.value}">${f.label}</option>`).join('');
+  document.getElementById('customRuleList').innerHTML = (KB.customRules||[]).map((r,i)=>`
+    <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;">
+      <div class="field-row">
+        <input type="text" value="${(r.label||'').replace(/"/g,'&quot;')}" placeholder="Label, e.g. 'Backup retention period'" onchange="KB.customRules[${i}].label=this.value; saveKB(KB);">
+        <input type="text" value="${(r.category||'').replace(/"/g,'&quot;')}" placeholder="Category, e.g. 'Backup'" onchange="KB.customRules[${i}].category=this.value; saveKB(KB);">
+      </div>
+      <input type="text" style="margin-top:8px; font-family:Consolas,monospace;" value="${(r.pattern||'').replace(/"/g,'&quot;')}" placeholder="Regex with one capture group, e.g. (\\d+)\\s*days? retention" onchange="KB.customRules[${i}].pattern=this.value; saveKB(KB);">
+      <div class="field-row" style="margin-top:8px;">
+        <select onchange="KB.customRules[${i}].kbField=this.value; saveKB(KB);"><option value="">— compare to ESDS value —</option>${fieldOptions}</select>
+        <select onchange="KB.customRules[${i}].comparison=this.value; saveKB(KB);">
+          <option value="gte" ${r.comparison!=='lte'?'selected':''}>ESDS value must be ≥ RFP ask</option>
+          <option value="lte" ${r.comparison==='lte'?'selected':''}>ESDS value must be ≤ RFP ask</option>
+        </select>
+      </div>
+      <div style="text-align:right; margin-top:8px;"><button class="icon-btn" onclick="KB.customRules.splice(${i},1); saveKB(KB); refreshLibraryUI();">✕</button></div>
+    </div>`).join('') || `<div class="small-muted">No custom rules yet — click "Add custom rule" below.</div>`;
+  // restore selected values (re-render loses select state otherwise)
+  (KB.customRules||[]).forEach((r,i)=>{
+    const row = document.getElementById('customRuleList').children[i];
+    if(!row) return;
+    const selects = row.querySelectorAll('select');
+    if(selects[0]) selects[0].value = r.kbField||'';
+  });
+}
+
+document.getElementById('btnAddCert').addEventListener('click', ()=>{ KB.certifications.push('New certification'); saveKB(KB); refreshLibraryUI(); });
+document.getElementById('btnAddDC').addEventListener('click', ()=>{ KB.dataCentres.push({location:'New location', tier:'Tier III', note:''}); saveKB(KB); refreshLibraryUI(); });
+document.getElementById('btnAddProduct').addEventListener('click', ()=>{ KB.products.push({name:'New product', desc:''}); saveKB(KB); refreshLibraryUI(); });
+document.getElementById('btnAddSLA').addEventListener('click', ()=>{ KB.slas.push({scope:'New scope', pct:99.9}); saveKB(KB); refreshLibraryUI(); });
+document.getElementById('btnAddRefProject').addEventListener('click', ()=>{ KB.referenceProjects = KB.referenceProjects||[]; KB.referenceProjects.push({name:'New project', client:'', scope:'', keywords:''}); saveKB(KB); refreshLibraryUI(); });
+document.getElementById('btnAddCustomRule').addEventListener('click', ()=>{ KB.customRules = KB.customRules||[]; KB.customRules.push({label:'New rule', category:'Custom', pattern:'', kbField:'', comparison:'gte'}); saveKB(KB); refreshLibraryUI(); });
+
+document.getElementById('btnSaveLibrary').addEventListener('click', ()=>{
+  KB.company.name = document.getElementById('f_companyName').value;
+  KB.company.founded = parseInt(document.getElementById('f_founded').value)||KB.company.founded;
+  KB.company.hq = document.getElementById('f_hq').value;
+  KB.company.footprint = document.getElementById('f_footprint').value;
+  KB.company.clients = document.getElementById('f_clients').value;
+  KB.company.cin = document.getElementById('f_cin').value;
+  KB.company.pan = document.getElementById('f_pan').value;
+  KB.company.gst = document.getElementById('f_gst').value;
+  KB.manpower.fte = parseInt(document.getElementById('f_fte').value)||0;
+  KB.manpower.note = document.getElementById('f_fteNote').value;
+
+  KB.infra.computeVMs = parseInt(document.getElementById('f_computeVMs').value)||0;
+  KB.infra.storagePB = parseFloat(document.getElementById('f_storagePB').value)||0;
+  KB.infra.gpuNodes = parseInt(document.getElementById('f_gpuNodes').value)||0;
+  KB.infra.aiStoragePB = parseFloat(document.getElementById('f_aiStoragePB').value)||0;
+  KB.infra.networkGbps = parseInt(document.getElementById('f_networkGbps').value)||0;
+  KB.infra.orchestration = document.getElementById('f_orchestration').value;
+  KB.infra.gpuFamilies = document.getElementById('f_gpuFamilies').value;
+  KB.dr.rpoMinutes = parseInt(document.getElementById('f_rpo').value)||0;
+  KB.dr.rtoMinutes = parseInt(document.getElementById('f_rto').value)||0;
+
+  KB.signatory.name = document.getElementById('f_sigName').value;
+  KB.signatory.designation = document.getElementById('f_sigDesig').value;
+  KB.signatory.mobile = document.getElementById('f_sigMobile').value;
+  KB.signatory.email = document.getElementById('f_sigEmail').value;
+  KB.signatory.address = document.getElementById('f_sigAddress').value;
+
+  saveKB(KB);
+  refreshLibraryUI();
+  const status = document.getElementById('saveLibStatus');
+  status.textContent = 'Saved ✓';
+  setTimeout(()=>status.textContent='', 2000);
+});
+
+/* ================= HISTORY ================= */
+const STATUS_COLORS = {Bidding:'status-info', Submitted:'status-partial', Won:'status-met', Lost:'status-gap', 'Not Pursuing':'status-na'};
+function refreshHistoryUI(){
+  const hist = loadHistory();
+  document.getElementById('navHistBadge').textContent = hist.length;
+  const tbody = document.getElementById('historyTableBody');
+  if(hist.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-mute);padding:30px;">No analyses yet.</td></tr>`;
+  } else {
+    tbody.innerHTML = hist.map((h,i)=>`
+      <tr>
+        <td style="font-weight:600;">${h.meta.tenderNo || h.sourceName}</td>
+        <td>${new Date(h.analysedAt).toLocaleString('en-IN')}</td>
+        <td><b style="color:${h.fitScore>=75?'#16A34A':(h.fitScore>=45?'#D97706':'#DC2626')}">${h.fitScore}%</b></td>
+        <td>${h.counts.met||0} / ${h.counts.partial||0} / ${h.counts.gap||0}</td>
+        <td><select onchange="updateHistoryStatus(${i}, this.value)">
+          ${['Bidding','Submitted','Won','Lost','Not Pursuing'].map(s=>`<option ${s===(h.status||'Bidding')?'selected':''}>${s}</option>`).join('')}
+        </select></td>
+        <td><button class="pill-btn secondary" onclick="reopenHistory(${i})">Open</button></td>
+      </tr>`).join('');
+  }
+
+  // pipeline stats (feature: turn History into a mini pipeline tracker)
+  const counts = {Bidding:0, Submitted:0, Won:0, Lost:0, 'Not Pursuing':0};
+  hist.forEach(h=>{ counts[h.status||'Bidding'] = (counts[h.status||'Bidding']||0)+1; });
+  const winRateBase = counts.Won + counts.Lost;
+  const winRate = winRateBase>0 ? Math.round((counts.Won/winRateBase)*100) : null;
+  document.getElementById('pipelineStats').innerHTML = `
+    <div class="stat-card"><div class="label">Bidding</div><div class="num">${counts.Bidding}</div><div class="foot">In progress</div></div>
+    <div class="stat-card c-purple"><div class="label">Submitted</div><div class="num">${counts.Submitted}</div><div class="foot">Awaiting result</div></div>
+    <div class="stat-card c-green"><div class="label">Win rate</div><div class="num">${winRate!=null ? winRate+'%' : '—'}</div><div class="foot">${counts.Won} won / ${counts.Lost} lost</div></div>
+    <div class="stat-card c-amber"><div class="label">Not pursuing</div><div class="num">${counts['Not Pursuing']}</div><div class="foot">Declined to bid</div></div>`;
+
+  const dashWrap = document.getElementById('dashHistoryBody');
+  if(hist.length===0){
+    dashWrap.innerHTML = `<div class="empty-state"><div class="icon">◷</div>No analyses yet. Run your first one from "Upload &amp; Analyse RFP".</div>`;
+  } else {
+    dashWrap.innerHTML = `<table><tbody>` + hist.slice(0,5).map((h,i)=>`
+      <tr><td style="font-weight:600;">${h.meta.tenderNo || h.sourceName}</td>
+      <td class="small-muted">${new Date(h.analysedAt).toLocaleDateString('en-IN')}</td>
+      <td><b style="color:${h.fitScore>=75?'#16A34A':(h.fitScore>=45?'#D97706':'#DC2626')}">${h.fitScore}%</b></td>
+      <td><span class="status-pill ${STATUS_COLORS[h.status||'Bidding']}">${h.status||'Bidding'}</span></td>
+      <td><button class="pill-btn secondary" onclick="reopenHistory(${i})">Open</button></td></tr>`).join('') + `</tbody></table>`;
+  }
+}
+function updateHistoryStatus(i, val){
+  const hist = loadHistory();
+  hist[i].status = val;
+  saveHistory(hist);
+  if(currentAnalysis && currentAnalysis.analysedAt===hist[i].analysedAt) currentAnalysis.status = val;
+  refreshHistoryUI();
+}
+function reopenHistory(i){
+  const hist = loadHistory();
+  currentAnalysis = hist[i];
+  renderResults(currentAnalysis);
+  go('results');
+}
+
+/* ================= SETTINGS ================= */
+document.getElementById('btnExportKB').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(KB,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='swaraj-drishti-capability-library.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btnImportKB').addEventListener('click', ()=>document.getElementById('importKBInput').click());
+document.getElementById('importKBInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const text = await readFileAsText(file);
+    const parsed = JSON.parse(text);
+    KB = parsed; saveKB(KB); refreshLibraryUI(); renderAnnexureList();
+    alert('Capability library imported.');
+  }catch(err){ alert('Could not read that file as a valid library export.'); }
+});
+document.getElementById('btnResetKB').addEventListener('click', ()=>{
+  if(!confirm('Reset the Capability Library to ESDS defaults? Your edits will be lost.')) return;
+  KB = JSON.parse(JSON.stringify(DEFAULT_KB));
+  saveKB(KB); refreshLibraryUI(); renderAnnexureList();
+});
+document.getElementById('btnClearAll').addEventListener('click', ()=>{
+  if(!confirm('This clears the capability library, saved analyses and API key from this browser. Continue?')) return;
+  localStorage.removeItem(LS_KB); localStorage.removeItem(LS_HISTORY); localStorage.removeItem(LS_AIKEY);
+  location.reload();
+});
+
+/* ================= INIT ================= */
+refreshLibraryUI();
+renderAnnexureList();
+refreshHistoryUI();
+</script>
+</body>
+</html>
